@@ -58,6 +58,6 @@ localPort = 5001
 externalPort = 3000
 
 [deployment]
-deploymentTarget = "autoscale"
-run = ["bash", "-c", "cd server && node index.js & cd client && npx vite preview --host 0.0.0.0 --port 5000"]
-build = ["bash", "-c", "cd client && npm install --legacy-peer-deps && npm run build"]
+deploymentTarget = "cloudrun"
+run = ["sh", "-c", "bash -c \"cd server && node index.js & cd client && npx vite preview --host 0.0.0.0 --port 5000\""]
+build = ["sh", "-c", "cd client && npm install --legacy-peer-deps && npm run build"]
