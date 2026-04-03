@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "build": "cd client && npm install --legacy-peer-deps && npm run build",
+    "build": "npm --prefix server install && npm --prefix client install --legacy-peer-deps && npm --prefix client run build",
     "start": "node server/index.js"
   },
   "devDependencies": {

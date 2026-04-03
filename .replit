@@ -60,4 +60,4 @@ externalPort = 3000
 [deployment]
 deploymentTarget = "autoscale"
 run = ["node", "server/index.js"]
-build = ["bash", "-c", "cd server && npm install && cd ../client && npm install --legacy-peer-deps && npm run build"]
+build = ["bash", "-c", "npm --prefix server install && npm --prefix client install --legacy-peer-deps && npm --prefix client run build"]
