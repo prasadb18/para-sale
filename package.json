@@ -1,4 +1,8 @@
 {
+  "scripts": {
+    "build": "cd client && npm install --legacy-peer-deps && npm run build",
+    "start": "node server/index.js"
+  },
   "devDependencies": {
     "vite": "^7.3.1",
     "vite-plugin-pwa": "^1.2.0"
