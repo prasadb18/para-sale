@@ -26,9 +26,18 @@ const formatPaymentStatus = (paymentStatus) => {
     .replace(/\b\w/g, character => character.toUpperCase())
 }
 
+const DATE_RANGES = [
+  { label: 'All time', value: 'all' },
+  { label: 'Today', value: 'today' },
+  { label: 'Last 7 days', value: '7d' },
+  { label: 'Last 30 days', value: '30d' }
+]
+
 export default function AdminOrders() {
   const [orders, setOrders] = useState([])
   const [filter, setFilter] = useState('all')
+  const [dateRange, setDateRange] = useState('all')
+  const [search, setSearch] = useState('')
   const [expanded, setExpanded] = useState(null)
   const [loading, setLoading] = useState(true)
 
@@ -58,9 +67,27 @@ export default function AdminOrders() {
     ))
   }
 
-  const filtered = filter === 'all'
-    ? orders
-    : orders.filter(o => o.status === filter)
+  const getDateCutoff = () => {
+    const now = new Date()
+    if (dateRange === 'today') { now.setHours(0,0,0,0); return now }
+    if (dateRange === '7d') { now.setDate(now.getDate() - 7); return now }
+    if (dateRange === '30d') { now.setDate(now.getDate() - 30); return now }
+    return null
+  }
+
+  const filtered = orders.filter(o => {
+    if (filter !== 'all' && o.status !== filter) return false
+    const cutoff = getDateCutoff()
+    if (cutoff && new Date(o.created_at) < cutoff) return false
+    if (search.trim()) {
+      const q = search.trim().toLowerCase()
+      const matchesId = o.id.toLowerCase().includes(q)
+      const matchesName = o.profiles?.full_name?.toLowerCase().includes(q)
+      const matchesPhone = o.profiles?.phone?.toLowerCase().includes(q)
+      if (!matchesId && !matchesName && !matchesPhone) return false
+    }
+    return true
+  })
 
   if (loading) return <p style={{ padding: '40px', textAlign: 'center' }}>Loading orders...</p>
 
@@ -68,7 +95,28 @@ export default function AdminOrders() {
     <div style={styles.page}>
       <h2 style={styles.heading}>All Orders ({orders.length})</h2>
 
-      {/* Filter tabs */}
+      {/* Search */}
+      <input
+        style={styles.searchInput}
+        placeholder="Search by order ID, customer name or phone..."
+        value={search}
+        onChange={e => setSearch(e.target.value)}
+      />
+
+      {/* Date filter */}
+      <div style={{ ...styles.tabs, marginBottom: '10px' }}>
+        {DATE_RANGES.map(r => (
+          <button key={r.value} style={{
+            ...styles.tab,
+            background: dateRange === r.value ? '#1a1a2e' : 'white',
+            color: dateRange === r.value ? 'white' : '#555'
+          }} onClick={() => setDateRange(r.value)}>
+            {r.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Status filter tabs */}
       <div style={styles.tabs}>
         {['all', ...STATUSES].map(s => (
           <button key={s} style={{
@@ -86,9 +134,13 @@ export default function AdminOrders() {
         ))}
       </div>
 
+      <p style={{ color: '#888', fontSize: '13px', margin: '0 0 12px' }}>
+        Showing {filtered.length} order{filtered.length !== 1 ? 's' : ''}
+      </p>
+
       {filtered.length === 0 && (
         <p style={{ textAlign: 'center', color: '#888', padding: '40px' }}>
-          No {filter} orders
+          No orders found
         </p>
       )}
 
@@ -251,5 +303,8 @@ const styles = {
   statusUpdater: { marginTop: '8px' },
   statusBtns: { display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '8px' },
   statusBtn: { padding: '7px 14px', borderRadius: '20px', border: '1.5px solid #ddd',
-    cursor: 'pointer', fontSize: '13px', transition: 'all 0.15s' }
+    cursor: 'pointer', fontSize: '13px', transition: 'all 0.15s' },
+  searchInput: { width: '100%', padding: '10px 14px', border: '1.5px solid #ddd',
+    borderRadius: '10px', fontSize: '14px', marginBottom: '14px',
+    boxSizing: 'border-box', outline: 'none' }
 }

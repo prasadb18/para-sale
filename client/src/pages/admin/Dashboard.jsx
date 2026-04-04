@@ -8,11 +8,13 @@ export default function Dashboard() {
     todayRevenue: 0, totalProducts: 0
   })
   const [recentOrders, setRecentOrders] = useState([])
+  const [lowStock, setLowStock] = useState([])
   const navigate = useNavigate()
 
   useEffect(() => {
     fetchStats()
     fetchRecentOrders()
+    fetchLowStock()
   }, [])
 
   const fetchStats = async () => {
@@ -43,6 +45,16 @@ export default function Dashboard() {
       .order('created_at', { ascending: false })
       .limit(5)
     setRecentOrders(data || [])
+  }
+
+  const fetchLowStock = async () => {
+    const { data } = await supabase
+      .from('products')
+      .select('id, name, stock, unit')
+      .eq('is_active', true)
+      .lte('stock', 5)
+      .order('stock', { ascending: true })
+    setLowStock(data || [])
   }
 
   const STATUS_COLOR = {
@@ -109,12 +121,40 @@ export default function Dashboard() {
         })}
       </div>
 
+      {/* Low stock alerts */}
+      {lowStock.length > 0 && (
+        <div style={{ ...styles.section, borderColor: '#f39c12' }}>
+          <div style={styles.sectionHeader}>
+            <h3 style={{ ...styles.sectionTitle, color: '#f39c12' }}>
+              ⚠️ Low Stock ({lowStock.length})
+            </h3>
+            <button style={styles.viewAll}
+              onClick={() => navigate('/admin/products')}>
+              Manage →
+            </button>
+          </div>
+          {lowStock.map(p => (
+            <div key={p.id} style={styles.orderRow}>
+              <p style={styles.orderId}>{p.name}</p>
+              <span style={{
+                ...styles.badge,
+                background: p.stock === 0 ? '#fce4ec' : '#fff8e1',
+                color: p.stock === 0 ? '#e91e63' : '#f39c12'
+              }}>
+                {p.stock === 0 ? 'Out of stock' : `${p.stock} ${p.unit}s left`}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Quick links */}
       <div style={styles.quickLinks}>
         {[
           { label: '📋 Manage Orders', path: '/admin/orders' },
           { label: '📦 Manage Products', path: '/admin/products' },
-          { label: '➕ Add Product', path: '/admin/products/new' }
+          { label: '➕ Add Product', path: '/admin/products/new' },
+          { label: '🗂️ Categories', path: '/admin/categories' }
         ].map(link => (
           <button key={link.path} style={styles.quickBtn}
             onClick={() => navigate(link.path)}>

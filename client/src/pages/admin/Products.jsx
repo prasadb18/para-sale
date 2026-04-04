@@ -9,6 +9,8 @@ export default function AdminProducts() {
   const [loading, setLoading] = useState(true)
   const [editingId, setEditingId] = useState(null)
   const [form, setForm] = useState({})
+  const [search, setSearch] = useState('')
+  const [deletingId, setDeletingId] = useState(null)
   const navigate = useNavigate()
 
   useEffect(() => {
@@ -64,6 +66,18 @@ export default function AdminProducts() {
     ))
   }
 
+  const deleteProduct = async (id) => {
+    await supabase.from('products').delete().eq('id', id)
+    setProducts(prev => prev.filter(p => p.id !== id))
+    setDeletingId(null)
+  }
+
+  const visible = products.filter(p => {
+    if (!search.trim()) return true
+    const q = search.trim().toLowerCase()
+    return p.name.toLowerCase().includes(q) || (p.brand || '').toLowerCase().includes(q)
+  })
+
   if (loading) return <p style={{ padding: '40px', textAlign: 'center' }}>Loading...</p>
 
   return (
@@ -76,7 +90,14 @@ export default function AdminProducts() {
         </button>
       </div>
 
-      {products.map(product => (
+      <input
+        style={styles.searchInput}
+        placeholder="Search by name or brand..."
+        value={search}
+        onChange={e => setSearch(e.target.value)}
+      />
+
+      {visible.map(product => (
         <div key={product.id} style={{
           ...styles.card,
           opacity: product.is_active ? 1 : 0.6
@@ -189,6 +210,22 @@ export default function AdminProducts() {
                 >
                   {product.is_active ? 'Hide' : 'Show'}
                 </button>
+                {deletingId === product.id ? (
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <button style={{ ...styles.toggleBtn, background: '#e91e63', color: 'white' }}
+                      onClick={() => deleteProduct(product.id)}>
+                      Confirm
+                    </button>
+                    <button style={styles.editBtn} onClick={() => setDeletingId(null)}>
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button style={{ ...styles.toggleBtn, background: '#f5f5f5', color: '#999' }}
+                    onClick={() => setDeletingId(product.id)}>
+                    Delete
+                  </button>
+                )}
               </div>
             </div>
           )}
@@ -239,5 +276,8 @@ const styles = {
   saveBtn: { padding: '10px 24px', background: '#1a1a2e', color: 'white',
     border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '700' },
   cancelBtn: { padding: '10px 24px', background: 'white', color: '#555',
-    border: '1.5px solid #ddd', borderRadius: '8px', cursor: 'pointer' }
+    border: '1.5px solid #ddd', borderRadius: '8px', cursor: 'pointer' },
+  searchInput: { width: '100%', padding: '10px 14px', border: '1.5px solid #ddd',
+    borderRadius: '10px', fontSize: '14px', marginBottom: '14px',
+    boxSizing: 'border-box', outline: 'none' }
 }

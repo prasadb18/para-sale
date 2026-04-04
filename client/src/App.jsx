@@ -12,6 +12,7 @@ import Dashboard from './pages/admin/Dashboard'
 import AdminOrders from './pages/admin/Orders'
 import AdminProducts from './pages/admin/Products'
 import NewProduct from './pages/admin/NewProduct'
+import AdminCategories from './pages/admin/Categories'
 import Navbar from './components/Navbar'
 import CartNotice from './components/CartNotice'
 import Footer from './components/Footer'
@@ -72,6 +73,7 @@ export default function App() {
       <Route path="/admin/orders" element={<Admin><AdminOrders /></Admin>} />
       <Route path="/admin/products" element={<Admin><AdminProducts /></Admin>} />
       <Route path="/admin/products/new" element={<Admin><NewProduct /></Admin>} />
+      <Route path="/admin/categories" element={<Admin><AdminCategories /></Admin>} />
     </Routes>
   )
 }

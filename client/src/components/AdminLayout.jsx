@@ -6,7 +6,8 @@ export default function AdminLayout({ children }) {
   const links = [
     { path: '/admin', label: '📊 Dashboard' },
     { path: '/admin/orders', label: '📋 Orders' },
-    { path: '/admin/products', label: '📦 Products' }
+    { path: '/admin/products', label: '📦 Products' },
+    { path: '/admin/categories', label: '🗂️ Categories' }
   ]
 
   return (
