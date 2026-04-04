@@ -3,7 +3,7 @@ const cors = require('cors')
 const crypto = require('crypto')
 const path = require('path')
 const fs = require('fs')
-require('dotenv').config()
+require('dotenv').config({ path: require('path').resolve(__dirname, '.env') })
 const { createClient } = require('@supabase/supabase-js')
 
 const app = express()
