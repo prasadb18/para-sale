@@ -14,23 +14,20 @@ export default function AdminRoute({ children }) {
       return
     }
 
-    supabase.auth.getSession().then(({ data }) => {
-      const currentUser = data?.session?.user ?? user
-      const appMeta = currentUser?.app_metadata
-      const userMeta = currentUser?.user_metadata
-
-      setIsAdmin(
-        appMeta?.is_admin === true ||
-        appMeta?.role === 'admin' ||
-        userMeta?.is_admin === true ||
-        userMeta?.role === 'admin'
-      )
-    })
+    supabase
+      .from('profiles')
+      .select('is_admin')
+      .eq('id', user.id)
+      .single()
+      .then(({ data }) => {
+        setIsAdmin(data?.is_admin === true)
+      })
   }, [initialized, user])
 
   if (!initialized || isAdmin === null) return (
     <p style={{ padding: '40px', textAlign: 'center' }}>Checking access...</p>
   )
-  if (!user || !isAdmin) return <Navigate to="/" />
+  if (!user) return <Navigate to="/login" />
+  if (!isAdmin) return <Navigate to="/" />
   return children
 }
