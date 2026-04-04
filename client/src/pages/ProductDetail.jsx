@@ -96,11 +96,11 @@ export default function ProductDetail() {
           <p className="eyebrow">{product.categories?.name || 'Catalog item'}</p>
           <h1 className="product-detail__title">{product.name}</h1>
           <p className="product-detail__brand">
-            {product.brand || 'Parasale Select'}
+            {product.brand || '1ShopStore Select'}
           </p>
           <p className="product-detail__description">
             {product.description ||
-              'This item is ready for day-to-day ordering with a cleaner Parasale shopping experience.'}
+              'This item is ready for day-to-day ordering with a cleaner 1ShopStore shopping experience.'}
           </p>
 
           <div className="product-detail__price-row">

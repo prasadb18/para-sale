@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-const LOCAL_STORAGE_CART_KEY = 'parasale_cart'
+const LOCAL_STORAGE_CART_KEY = '1shopstore_cart'
 
 const loadCartFromStorage = () => {
   try {

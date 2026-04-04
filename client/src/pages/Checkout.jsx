@@ -299,7 +299,7 @@ export default function Checkout() {
         address_label: selectedAddress?.label,
         city: selectedAddress?.city,
         items: `${itemCount}`,
-        source: 'parasale-web'
+        source: '1shopstore-web'
       }
     })
 
@@ -311,14 +311,14 @@ export default function Checkout() {
       user?.user_metadata?.full_name ||
       user?.user_metadata?.name ||
       user?.email?.split('@')[0] ||
-      'Parasale Customer'
+      '1ShopStore Customer'
 
     await new Promise((resolve, reject) => {
       const paymentWindow = new Razorpay({
         key: data.key,
         amount: data.order.amount,
         currency: data.order.currency,
-        name: 'Parasale',
+        name: '1ShopStore',
         description: `Order total ${formatCurrency(grandTotal)}`,
         order_id: data.order.id,
         prefill: {

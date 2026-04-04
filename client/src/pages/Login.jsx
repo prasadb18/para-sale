@@ -84,7 +84,7 @@ export default function Login() {
     <div className="storefront-page shell">
       <div className="login-layout">
         <section className="login-spotlight reveal">
-          <span className="chip chip--accent">Parasale account</span>
+          <span className="chip chip--accent">1ShopStore account</span>
           <h1>Sign in to save addresses, track orders, and check out faster.</h1>
           <p>
             The new shopping-app UI works best when account details, delivery
@@ -109,9 +109,9 @@ export default function Login() {
 
         <section className="login-card reveal">
           <div className="login-card__brand">
-            <span className="brand-mark__badge">P</span>
+            <span className="brand-mark__badge">1</span>
             <div>
-              <strong>Parasale</strong>
+              <strong>1ShopStore</strong>
               <p className="card-copy">Customer access for the refreshed storefront.</p>
             </div>
           </div>

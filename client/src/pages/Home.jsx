@@ -45,7 +45,7 @@ export default function Home() {
     <div className="storefront-page">
       <section className="hero shell">
         <div className="hero__content reveal">
-          <p className="eyebrow">Parasale storefront</p>
+          <p className="eyebrow">1ShopStore</p>
           <h1 className="hero__title">
             A cleaner shopping app for hardware, tools, and repeat supply runs.
           </h1>
@@ -128,7 +128,7 @@ export default function Home() {
             {featuredProducts[0] ? (
               <>
                 <h3>{featuredProducts[0].name}</h3>
-                <p>{featuredProducts[0].brand || 'Parasale Select'}</p>
+                <p>{featuredProducts[0].brand || '1ShopStore Select'}</p>
                 <div className="hero-card__price">
                   {formatCurrency(featuredProducts[0].price)}
                 </div>
@@ -144,7 +144,7 @@ export default function Home() {
               <>
                 <h3>Fresh deals will appear here</h3>
                 <p>
-                  Once the catalog loads, Parasale can spotlight fast-moving
+                  Once the catalog loads, 1ShopStore can spotlight fast-moving
                   items right from the home screen.
                 </p>
               </>
@@ -174,7 +174,7 @@ export default function Home() {
             <p className="eyebrow">Browse aisles</p>
             <h2 className="section-title">Shop by category</h2>
             <p className="section-copy">
-              The refreshed Parasale layout keeps category discovery front and
+              The refreshed 1ShopStore layout keeps category discovery front and
               center, just like a shopping app should.
             </p>
           </div>

@@ -19,9 +19,9 @@ export default function Footer() {
       <div className="shell site-footer__inner">
         <div className="site-footer__grid">
           <section className="site-footer__brand">
-            <span className="brand-mark__badge">P</span>
+            <span className="brand-mark__badge">1</span>
             <div>
-              <h2>Parasale</h2>
+              <h2>1ShopStore</h2>
               <p>
                 A cleaner shopping app experience for hardware, utility, and
                 repeat supply ordering.
@@ -52,7 +52,7 @@ export default function Footer() {
           <section>
             <h3 className="site-footer__title">Support</h3>
             <div className="site-footer__notes">
-              <p>Email: <a href="mailto:support@parasales.com">support@parasales.com</a></p>
+              <p>Email: <a href="mailto:support@1shopstore.com">support@1shopstore.com</a></p>
               <p>Phone / WhatsApp: <a href="tel:+919967763999">+91 9967763999</a></p>
               <p>Business hours: 9:30 AM to 9:30 PM</p>
               <p>Service area: Palava, Dombivli East</p>
@@ -61,8 +61,8 @@ export default function Footer() {
         </div>
 
         <div className="site-footer__bottom">
-          <p>Legal / business name: Parasales</p>
-          <p>Parasale storefront for hardware catalog browsing, checkout, admin product upload, and order tracking.</p>
+          <p>Legal / business name: 1ShopStore</p>
+          <p>1ShopStore — hardware catalog browsing, checkout, admin product upload, and order tracking.</p>
         </div>
       </div>
     </footer>

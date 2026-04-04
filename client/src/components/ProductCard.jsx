@@ -58,7 +58,7 @@ export default function ProductCard({
         </button>
 
         <p className="product-card__meta">
-          {product.brand || 'Parasale Select'} · {deliveryMessage}
+          {product.brand || '1ShopStore Select'} · {deliveryMessage}
         </p>
 
         <div className="product-card__footer">

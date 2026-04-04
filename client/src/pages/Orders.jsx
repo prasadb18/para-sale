@@ -141,7 +141,7 @@ export default function Orders() {
           <h1 className="section-title">My orders</h1>
           <p className="section-copy">
             Status, address, payment state, and line items are now easier to
-            scan in the Parasale customer flow.
+            scan in the 1ShopStore customer flow.
           </p>
         </div>
       </div>

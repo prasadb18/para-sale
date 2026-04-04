@@ -34,9 +34,9 @@ export default function Navbar() {
     <header className="topbar">
       <div className="shell topbar__inner">
         <Link to="/" className="brand-mark">
-          <span className="brand-mark__badge">P</span>
+          <span className="brand-mark__badge">1</span>
           <span>
-            <strong>Parasale</strong>
+            <strong>1ShopStore</strong>
             <small>Shopping made faster for repeat site orders</small>
           </span>
         </Link>

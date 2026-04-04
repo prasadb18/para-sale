@@ -18,7 +18,7 @@ const buildFallbackName = (user) => {
     .map(candidate => toCleanText(candidate))
     .find(Boolean)
 
-  return name || 'Parasale Customer'
+  return name || '1ShopStore Customer'
 }
 
 export async function ensureProfile(user) {

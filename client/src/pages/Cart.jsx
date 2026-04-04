@@ -15,7 +15,7 @@ export default function Cart() {
         <div className="empty-state">
           <p className="empty-state__icon">🛒</p>
           <h2 className="empty-state__title">Your cart is empty</h2>
-          <p>Add a few products to see the refreshed Parasale cart in action.</p>
+          <p>Add a few products to see the refreshed 1ShopStore cart in action.</p>
           <button
             type="button"
             className="button button--primary"
@@ -57,7 +57,7 @@ export default function Cart() {
 
               <div className="cart-row__summary">
                 <h2>{item.name}</h2>
-                <p>{item.brand || 'Parasale Select'}</p>
+                <p>{item.brand || '1ShopStore Select'}</p>
                 <div className="cart-row__pricing">
                   <span>{formatCurrency(item.price)} each</span>
                   <span>Line total {formatCurrency(item.price * item.qty)}</span>
