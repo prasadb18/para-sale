@@ -1,15 +1,18 @@
 const express = require('express')
 const cors = require('cors')
 const crypto = require('crypto')
+const path = require('path')
+const fs = require('fs')
 require('dotenv').config()
 const { createClient } = require('@supabase/supabase-js')
 
 const app = express()
+const router = express.Router()
 const jsonParser = express.json()
 const webhookJsonParser = express.raw({ type: 'application/json' })
 app.use(cors())
-app.use((req, res, next) => {
-  if (req.originalUrl === '/payments/razorpay/webhook') {
+router.use((req, res, next) => {
+  if (req.path === '/payments/razorpay/webhook') {
     return next()
   }
 
@@ -147,9 +150,9 @@ const syncRazorpayOrderRecord = async ({
   return { matched: data?.length || 0 }
 }
 
-app.get('/', (req, res) => res.json({ status: 'API is running' }))
+router.get('/', (req, res) => res.json({ status: 'API is running' }))
 
-app.get('/categories', async (req, res) => {
+router.get('/categories', async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('categories')
@@ -167,7 +170,7 @@ app.get('/categories', async (req, res) => {
   }
 })
 
-app.get('/products', async (req, res) => {
+router.get('/products', async (req, res) => {
   try {
     const { category, search } = req.query
     const trimmedSearch = search?.trim()
@@ -239,7 +242,7 @@ app.get('/products', async (req, res) => {
   }
 })
 
-app.get('/products/:id', async (req, res) => {
+router.get('/products/:id', async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('products')
@@ -259,7 +262,7 @@ app.get('/products/:id', async (req, res) => {
   }
 })
 
-app.post('/payments/razorpay/webhook', webhookJsonParser, async (req, res) => {
+router.post('/payments/razorpay/webhook', webhookJsonParser, async (req, res) => {
   if (!hasRazorpayWebhookConfig()) {
     return res.status(500).json({
       error: 'Razorpay webhook secret is not configured on the server.'
@@ -335,7 +338,7 @@ app.post('/payments/razorpay/webhook', webhookJsonParser, async (req, res) => {
   }
 })
 
-app.post('/payments/razorpay/order', async (req, res) => {
+router.post('/payments/razorpay/order', async (req, res) => {
   if (!hasRazorpayConfig()) {
     return res.status(500).json({
       error: 'Razorpay is not configured on the server.'
@@ -391,7 +394,7 @@ app.post('/payments/razorpay/order', async (req, res) => {
   }
 })
 
-app.post('/payments/razorpay/verify', async (req, res) => {
+router.post('/payments/razorpay/verify', async (req, res) => {
   if (!hasRazorpayConfig()) {
     return res.status(500).json({
       error: 'Razorpay is not configured on the server.'
@@ -431,8 +434,18 @@ app.post('/payments/razorpay/verify', async (req, res) => {
   })
 })
 
+app.use('/api', router)
+
+const clientDist = path.join(__dirname, '..', 'client', 'dist')
+if (fs.existsSync(clientDist)) {
+  app.use(express.static(clientDist))
+  app.get('/{*path}', (req, res) => {
+    res.sendFile(path.join(clientDist, 'index.html'))
+  })
+}
+
 const port = process.env.PORT || 3001
 
-app.listen(port, () =>
+app.listen(port, '0.0.0.0', () =>
   console.log(`Server running on port ${port}`)
 )
