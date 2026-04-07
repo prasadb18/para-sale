@@ -50,13 +50,13 @@ export default function Checkout() {
       return
     }
 
-    if (items.length === 0) {
+    if (items.length === 0 && step !== 'success') {
       navigate('/')
       return
     }
 
     fetchAddresses()
-  }, [items.length, navigate, user])
+  }, [items.length, step, navigate, user])
 
   const fetchAddresses = async (preferredAddress = null) => {
     const { data, error } = await supabase

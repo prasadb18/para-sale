@@ -76,18 +76,37 @@ export default function Orders() {
   }, [navigate, user])
 
   const fetchOrders = async () => {
-    const { data } = await supabase
-      .from('orders')
-      .select(`
-        *,
-        addresses(label, line1, city),
-        order_items(quantity, price_at_order, product_id, products(id,name,image_url,price))
-      `)
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
+    try {
+      const { data, error } = await supabase
+        .from('orders')
+        .select(`
+          *,
+          addresses(label, line1, city),
+          order_items(quantity, price_at_order, product_id, products(id, name, image_url, price))
+        `)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
 
-    setOrders(data || [])
-    setLoading(false)
+      if (error) {
+        // Fallback: fetch without nested product join (RLS might block it)
+        const { data: fallback, error: fallbackError } = await supabase
+          .from('orders')
+          .select(`*, addresses(label, line1, city), order_items(quantity, price_at_order, product_id)`)
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false })
+        if (fallbackError) throw fallbackError
+        setOrders(fallback || [])
+        return
+      }
+
+      if (error) throw error
+      setOrders(data || [])
+    } catch (err) {
+      console.error('Failed to load orders:', err)
+      setMessage('Could not load your orders. Please refresh the page.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const reorderCart = (order) => {
@@ -109,6 +128,21 @@ export default function Orders() {
       <div className="storefront-page shell">
         <div className="loading-state">
           <p>Loading orders...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (message && orders.length === 0) {
+    return (
+      <div className="storefront-page shell">
+        <div className="empty-state">
+          <p className="empty-state__icon">⚠️</p>
+          <h2 className="empty-state__title">Something went wrong</h2>
+          <p>{message}</p>
+          <button type="button" className="button button--primary" onClick={fetchOrders}>
+            Try again
+          </button>
         </div>
       </div>
     )
