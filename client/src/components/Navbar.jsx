@@ -34,11 +34,11 @@ export default function Navbar() {
     <header className="topbar">
       <div className="shell topbar__inner">
         <Link to="/" className="brand-mark">
-          <span className="brand-mark__badge">1</span>
-          <span>
-            <strong>1ShopStore</strong>
-            <small>Shopping made faster for repeat site orders</small>
-          </span>
+          <img
+            src="/logo.png"
+            alt="1ShopStore"
+            className="brand-logo"
+          />
         </Link>
 
         <form className="topbar__search" onSubmit={handleSearchSubmit}>

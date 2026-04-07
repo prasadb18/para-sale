@@ -158,8 +158,8 @@ const styles = {
   success: {
     margin: 0,
     fontSize: '12px',
-    color: '#1f6d5c',
-    background: '#e4f5ef',
+    color: '#0ea5e9',
+    background: '#e0f2fe',
     padding: '8px 10px',
     borderRadius: '8px'
   },

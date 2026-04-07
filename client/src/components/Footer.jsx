@@ -19,7 +19,7 @@ export default function Footer() {
       <div className="shell site-footer__inner">
         <div className="site-footer__grid">
           <section className="site-footer__brand">
-            <span className="brand-mark__badge">1</span>
+            <img src="/logo.png" alt="1ShopStore" className="brand-logo brand-logo--footer" />
             <div>
               <h2>1ShopStore</h2>
               <p>

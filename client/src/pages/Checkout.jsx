@@ -332,7 +332,7 @@ export default function Checkout() {
           receipt
         },
         theme: {
-          color: '#ef6b3f'
+          color: '#2563eb'
         },
         modal: {
           ondismiss: () => {
