@@ -410,35 +410,46 @@ export default function Checkout() {
 
   if (step === 'success') {
     return (
-      <div className="storefront-page shell success-shell">
-        <div className="success-panel reveal">
-          <span className="success-panel__badge">✓ Order placed</span>
-          <h1>Order received</h1>
-          <p>
-            Your order is now in the queue. The store team can confirm and
-            process it from the admin side shortly.
+      <div className="order-success-overlay">
+        <div className="order-success-modal reveal">
+          <div className="order-success-icon">✓</div>
+          <h2 className="order-success-title">Order Placed!</h2>
+          <p className="order-success-sub">
+            Your order has been received and is being processed by our team.
           </p>
 
-          <div className="success-panel__order">
-            Order ID <strong>{orderId?.slice(0, 8).toUpperCase()}</strong>
+          <div className="order-success-id">
+            <span>Order ID</span>
+            <strong>#{orderId?.slice(0, 8).toUpperCase()}</strong>
           </div>
 
-          <div className="stack-actions">
-            <button
-              type="button"
-              className="button button--primary button--full"
-              onClick={() => navigate('/orders')}
-            >
-              View my orders
-            </button>
-            <button
-              type="button"
-              className="button button--secondary button--full"
-              onClick={() => navigate('/')}
-            >
-              Continue shopping
-            </button>
+          <div className="order-success-info">
+            <div className="order-success-info-row">
+              <span>📦</span>
+              <p>You'll receive a confirmation once the store processes your order.</p>
+            </div>
+            <div className="order-success-info-row">
+              <span>🚚</span>
+              <p>Track delivery status in real-time from your orders page.</p>
+            </div>
           </div>
+
+          <button
+            type="button"
+            className="button button--primary button--full"
+            style={{ marginTop: 8 }}
+            onClick={() => navigate('/orders')}
+          >
+            View My Orders
+          </button>
+          <button
+            type="button"
+            className="button button--ghost button--full"
+            style={{ marginTop: 8 }}
+            onClick={() => navigate('/')}
+          >
+            Continue Shopping
+          </button>
         </div>
       </div>
     )
