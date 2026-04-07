@@ -51,6 +51,7 @@ export default function AdminProducts() {
   const [csvRows, setCsvRows] = useState([])
   const [csvError, setCsvError] = useState('')
   const [importing, setImporting] = useState(false)
+  const [importProgress, setImportProgress] = useState(null) // { done, total, errors }
   const [importResult, setImportResult] = useState(null)
   const fileRef = useRef()
   const navigate = useNavigate()
@@ -133,33 +134,52 @@ export default function AdminProducts() {
   const handleImport = async () => {
     setImporting(true)
     setImportResult(null)
-    let success = 0
-    let failed = 0
-    const errors = []
+    setImportProgress(null)
 
+    const errors = []
+    const BATCH_SIZE = 50
+
+    // Separate valid and invalid rows upfront
+    const valid = []
+    const invalid = []
     for (const row of csvRows) {
-      const cat = categories.find(c =>
-        c.name.toLowerCase() === (row.category_name || '').toLowerCase()
-      )
       if (!row.name || !row.price || !row.stock) {
-        failed++
-        errors.push(`"${row.name || 'unnamed'}": missing name, price or stock`)
-        continue
+        invalid.push(`"${row.name || 'unnamed'}": missing name, price or stock`)
+      } else {
+        const cat = categories.find(c =>
+          c.name.toLowerCase() === (row.category_name || '').toLowerCase()
+        )
+        valid.push({
+          name: row.name,
+          description: row.description || '',
+          brand: row.brand || '',
+          price: parseFloat(row.price) || 0,
+          mrp: row.mrp ? parseFloat(row.mrp) : null,
+          stock: parseInt(row.stock) || 0,
+          unit: row.unit || 'piece',
+          category_id: cat?.id || null,
+          image_url: row.image_url || '',
+          is_active: row.is_active !== 'false'
+        })
       }
-      const { error } = await supabase.from('products').insert({
-        name: row.name,
-        description: row.description || '',
-        brand: row.brand || '',
-        price: parseFloat(row.price) || 0,
-        mrp: row.mrp ? parseFloat(row.mrp) : null,
-        stock: parseInt(row.stock) || 0,
-        unit: row.unit || 'piece',
-        category_id: cat?.id || null,
-        image_url: row.image_url || '',
-        is_active: row.is_active !== 'false'
-      })
-      if (error) { failed++; errors.push(`"${row.name}": ${error.message}`) }
-      else success++
+    }
+
+    errors.push(...invalid)
+    let success = 0
+    let failed = invalid.length
+    setImportProgress({ done: 0, total: valid.length, errors: [] })
+
+    // Insert in batches of 50
+    for (let i = 0; i < valid.length; i += BATCH_SIZE) {
+      const batch = valid.slice(i, i + BATCH_SIZE)
+      const { error } = await supabase.from('products').insert(batch)
+      if (error) {
+        failed += batch.length
+        errors.push(`Batch ${Math.floor(i / BATCH_SIZE) + 1}: ${error.message}`)
+      } else {
+        success += batch.length
+      }
+      setImportProgress({ done: Math.min(i + BATCH_SIZE, valid.length), total: valid.length, errors })
     }
 
     setImportResult({ success, failed, errors })
@@ -419,6 +439,25 @@ export default function AdminProducts() {
                   {importing ? 'Importing...' : `Import ${csvRows.length} Products`}
                 </button>
               </div>
+
+              {importing && importProgress && (
+                <div className="import-progress">
+                  <div className="import-progress__header">
+                    <span>Importing products…</span>
+                    <span><strong>{importProgress.done}</strong> / {importProgress.total}</span>
+                  </div>
+                  <div className="import-progress__bar-track">
+                    <div
+                      className="import-progress__bar-fill"
+                      style={{ width: `${Math.round((importProgress.done / importProgress.total) * 100)}%` }}
+                    />
+                  </div>
+                  <p className="import-progress__pct">
+                    {Math.round((importProgress.done / importProgress.total) * 100)}% complete
+                    {importProgress.errors.length > 0 && ` · ${importProgress.errors.length} error(s)`}
+                  </p>
+                </div>
+              )}
 
               <div className="csv-preview-table-wrap">
                 <table className="csv-preview-table">
