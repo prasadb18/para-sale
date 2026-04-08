@@ -15,6 +15,7 @@ import NewProduct from './pages/admin/NewProduct'
 import AdminCategories from './pages/admin/Categories'
 import Navbar from './components/Navbar'
 import CartNotice from './components/CartNotice'
+import InstallBanner from './components/InstallBanner'
 import Footer from './components/Footer'
 import AdminLayout from './components/AdminLayout'
 import AdminRoute from './components/AdminRoute'
@@ -40,6 +41,7 @@ function StorefrontPage({ children }) {
   return (
     <div className="storefront-chrome">
       <Navbar />
+      <InstallBanner />
       <CartNotice />
       <div className="storefront-stage">
         <div className="storefront-stage__inner">
