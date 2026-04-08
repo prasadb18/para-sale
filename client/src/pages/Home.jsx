@@ -76,18 +76,18 @@ export default function Home() {
 
         {/* Stats row */}
         <div className="hero__stats">
-          <div className="stat-tile">
+          <button type="button" className="stat-tile stat-tile--btn" onClick={scrollToCategories}>
             <strong>{categories.length || '--'}</strong>
             <span>Categories</span>
-          </div>
-          <div className="stat-tile">
+          </button>
+          <button type="button" className="stat-tile stat-tile--btn" onClick={() => navigate('/products')}>
             <strong>{products.length || '--'}</strong>
             <span>Products</span>
-          </div>
-          <div className="stat-tile">
+          </button>
+          <button type="button" className="stat-tile stat-tile--btn" onClick={() => navigate('/products?filter=instock')}>
             <strong>{inStockProducts.length || '--'}</strong>
             <span>In Stock</span>
-          </div>
+          </button>
         </div>
       </section>
 

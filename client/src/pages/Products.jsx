@@ -13,6 +13,7 @@ export default function Products() {
   const addItem = useCartStore(s => s.addItem)
   const navigate = useNavigate()
   const searchQuery = searchParams.get('q')?.trim() || ''
+  const filterInStock = searchParams.get('filter') === 'instock'
 
   useEffect(() => {
     let isMounted = true
@@ -38,41 +39,55 @@ export default function Products() {
   const inStockProducts = products.filter(product => Number(product.stock || 0) > 0)
   const hasSearch = Boolean(searchQuery)
 
-  const heroEyebrow = hasSearch
-    ? 'Search results'
-    : categorySlug
-      ? 'Category aisle'
-      : 'Catalog'
+  const displayedProducts = filterInStock ? inStockProducts : products
 
-  const heroTitle = hasSearch
-    ? `Results for "${searchQuery}"`
-    : categorySlug
-      ? categoryLabel
-      : 'All products'
+  const heroEyebrow = filterInStock
+    ? 'In stock'
+    : hasSearch
+      ? 'Search results'
+      : categorySlug
+        ? 'Category aisle'
+        : 'Catalog'
 
-  const heroCopy = hasSearch
-    ? 'Search now scans product name, brand, and description so the navbar search leads somewhere useful.'
-    : categorySlug
-      ? 'This catalog view now behaves like a proper shopping app lane: clearer compare, easier add-to-cart, and stronger visual hierarchy.'
-      : 'Browse the full active catalog and use the search bar to quickly narrow things down.'
+  const heroTitle = filterInStock
+    ? 'In Stock Products'
+    : hasSearch
+      ? `Results for "${searchQuery}"`
+      : categorySlug
+        ? categoryLabel
+        : 'All products'
 
-  const sectionTitle = hasSearch
-    ? `Matching products`
-    : categorySlug
-      ? `${categoryLabel} picks`
-      : 'Browse all products'
+  const heroCopy = filterInStock
+    ? 'Showing only products currently available in stock and ready to ship.'
+    : hasSearch
+      ? 'Search now scans product name, brand, and description so the navbar search leads somewhere useful.'
+      : categorySlug
+        ? 'This catalog view now behaves like a proper shopping app lane: clearer compare, easier add-to-cart, and stronger visual hierarchy.'
+        : 'Browse the full active catalog and use the search bar to quickly narrow things down.'
+
+  const sectionTitle = filterInStock
+    ? `${inStockProducts.length} items in stock`
+    : hasSearch
+      ? `Matching products`
+      : categorySlug
+        ? `${categoryLabel} picks`
+        : 'Browse all products'
 
   const emptyTitle = hasSearch
     ? 'No products matched your search'
-    : categorySlug
-      ? 'No products in this aisle'
-      : 'No products available yet'
+    : filterInStock
+      ? 'No products in stock'
+      : categorySlug
+        ? 'No products in this aisle'
+        : 'No products available yet'
 
   const emptyCopy = hasSearch
     ? 'Try a different keyword, brand name, or shorter phrase.'
-    : categorySlug
-      ? 'Try another category or add new inventory from the admin side.'
-      : 'Add inventory from the admin side to populate the storefront.'
+    : filterInStock
+      ? 'Check back soon — stock is updated regularly.'
+      : categorySlug
+        ? 'Try another category or add new inventory from the admin side.'
+        : 'Add inventory from the admin side to populate the storefront.'
 
   return (
     <div className="storefront-page">
@@ -129,7 +144,7 @@ export default function Products() {
           <div className="loading-state">
             <p>Loading products...</p>
           </div>
-        ) : products.length === 0 ? (
+        ) : displayedProducts.length === 0 ? (
           <div className="empty-state">
             <p className="empty-state__icon">📦</p>
             <h3 className="empty-state__title">{emptyTitle}</h3>
@@ -137,7 +152,7 @@ export default function Products() {
           </div>
         ) : (
           <div className="product-grid">
-            {products.map(product => (
+            {displayedProducts.map(product => (
               <ProductCard
                 key={product.id}
                 product={product}

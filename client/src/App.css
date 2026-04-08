@@ -630,6 +630,23 @@
   font-size: 0.85rem;
 }
 
+.stat-tile--btn {
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s;
+  text-align: left;
+  width: 100%;
+}
+
+.stat-tile--btn:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+  transform: translateY(-2px);
+}
+
+.stat-tile--btn:active {
+  transform: translateY(0);
+}
+
 /* Legacy hero — keep for compatibility */
 .hero__content,
 .hero__visual {
