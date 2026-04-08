@@ -3791,6 +3791,21 @@
   line-height: 1.5;
 }
 
+.guest-success-cta {
+  margin-top: 16px;
+  padding: 14px 16px;
+  background: var(--accent-soft);
+  border-radius: 10px;
+  text-align: center;
+}
+
+.guest-success-cta p {
+  font-size: 0.85rem;
+  color: var(--text-soft);
+  margin-bottom: 10px;
+  line-height: 1.5;
+}
+
 @media (max-width: 480px) {
   .order-success-modal {
     padding: 28px 20px 22px;

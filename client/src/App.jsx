@@ -67,8 +67,8 @@ export default function App() {
       <Route path="/products/:categorySlug" element={<StorefrontPage><Products /></StorefrontPage>} />
       <Route path="/product/:id" element={<StorefrontPage><ProductDetail /></StorefrontPage>} />
       <Route path="/login" element={<StorefrontPage><Login /></StorefrontPage>} />
-      <Route path="/cart" element={<StorefrontPage><ProtectedRoute><Cart /></ProtectedRoute></StorefrontPage>} />
-      <Route path="/checkout" element={<StorefrontPage><ProtectedRoute><Checkout /></ProtectedRoute></StorefrontPage>} />
+      <Route path="/cart" element={<StorefrontPage><Cart /></StorefrontPage>} />
+      <Route path="/checkout" element={<StorefrontPage><Checkout /></StorefrontPage>} />
       <Route path="/orders" element={<StorefrontPage><ProtectedRoute><Orders /></ProtectedRoute></StorefrontPage>} />
 
       <Route path="/admin" element={<Admin><Dashboard /></Admin>} />
