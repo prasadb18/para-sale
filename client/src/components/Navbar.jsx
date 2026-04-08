@@ -2,23 +2,27 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import useCartStore from '../store/cartStore'
 import useAuthStore from '../store/authStore'
+import useLocationStore from '../store/locationStore'
+import LocationPicker from './LocationPicker'
 
 export default function Navbar() {
   const count = useCartStore(s => s.count)
   const total = useCartStore(s => s.total)
   const { user, signOut } = useAuthStore()
-  const location = useLocation()
+  const { location: deliveryLocation } = useLocationStore()
+  const routerLocation = useLocation()
   const navigate = useNavigate()
   const [searchTerm, setSearchTerm] = useState('')
   const [accountOpen, setAccountOpen] = useState(false)
+  const [locationOpen, setLocationOpen] = useState(false)
   const accountRef = useRef(null)
 
   useEffect(() => {
-    const params = new URLSearchParams(location.search)
+    const params = new URLSearchParams(routerLocation.search)
     setSearchTerm(params.get('q') || '')
-  }, [location.search])
+  }, [routerLocation.search])
 
-  // Close dropdown on outside click
+  // Close account dropdown on outside click
   useEffect(() => {
     const handler = (e) => {
       if (accountRef.current && !accountRef.current.contains(e.target)) {
@@ -46,109 +50,128 @@ export default function Navbar() {
     maximumFractionDigits: 0
   }).format(total)
 
+  const displayLabel = deliveryLocation?.label || 'Set location'
+  const displaySublabel = deliveryLocation?.sublabel || 'Tap to select area'
+
   return (
-    <header className="topbar">
-      <div className="topbar__inner">
+    <>
+      <header className="topbar">
+        <div className="topbar__inner">
 
-        {/* Logo */}
-        <Link to="/" className="brand-mark">
-          <img src="/logo.png" alt="1ShopStore" className="brand-logo" />
-        </Link>
+          {/* Logo */}
+          <Link to="/" className="brand-mark">
+            <img src="/logo.png" alt="1ShopStore" className="brand-logo" />
+          </Link>
 
-        {/* Delivery zone */}
-        <div className="topbar__delivery">
-          <span className="topbar__delivery-label">Fast Delivery</span>
-          <span className="topbar__delivery-zone">
-            Palava &amp; Dombivli East
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
-              <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
-          </span>
-        </div>
-
-        {/* Search */}
-        <form className="topbar__search" onSubmit={handleSearchSubmit}>
-          <svg className="topbar__search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2"/>
-            <path d="M20 20l-3-3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-          </svg>
-          <input
-            type="search"
-            className="topbar__search-input"
-            placeholder='Search products...'
-            value={searchTerm}
-            onChange={e => setSearchTerm(e.target.value)}
-            aria-label="Search products"
-          />
-        </form>
-
-        {/* Account dropdown */}
-        <div className="topbar__account" ref={accountRef}>
+          {/* Delivery zone — opens location picker */}
           <button
             type="button"
-            className="topbar__account-btn"
-            onClick={() => setAccountOpen(v => !v)}
-            aria-expanded={accountOpen}
+            className="topbar__delivery"
+            onClick={() => setLocationOpen(true)}
+            aria-label="Change delivery location"
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              <circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="2"/>
-              <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-            </svg>
-            <span>Account</span>
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true" className={accountOpen ? 'chevron--up' : ''}>
-              <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-            </svg>
+            <span className="topbar__delivery-label">
+              {deliveryLocation ? 'Delivery to' : 'Fast Delivery'}
+            </span>
+            <span className="topbar__delivery-zone">
+              {displayLabel}
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </span>
+            {deliveryLocation?.sublabel && (
+              <span className="topbar__delivery-sub">{displaySublabel}</span>
+            )}
           </button>
 
-          {accountOpen && (
-            <div className="account-dropdown">
-              {user ? (
-                <>
-                  <div className="account-dropdown__user">
-                    <span className="account-dropdown__email">{user.email}</span>
-                  </div>
-                  <Link
-                    to="/orders"
-                    className="account-dropdown__item"
-                    onClick={() => setAccountOpen(false)}
-                  >
-                    My Orders
-                  </Link>
+          {/* Search */}
+          <form className="topbar__search" onSubmit={handleSearchSubmit}>
+            <svg className="topbar__search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="2"/>
+              <path d="M20 20l-3-3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+            </svg>
+            <input
+              type="search"
+              className="topbar__search-input"
+              placeholder="Search products..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              aria-label="Search products"
+            />
+          </form>
+
+          {/* Account dropdown */}
+          <div className="topbar__account" ref={accountRef}>
+            <button
+              type="button"
+              className="topbar__account-btn"
+              onClick={() => setAccountOpen(v => !v)}
+              aria-expanded={accountOpen}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="2"/>
+                <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
+              <span>Account</span>
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true" className={accountOpen ? 'chevron--up' : ''}>
+                <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+
+            {accountOpen && (
+              <div className="account-dropdown">
+                {user ? (
+                  <>
+                    <div className="account-dropdown__user">
+                      <span className="account-dropdown__email">{user.email}</span>
+                    </div>
+                    <Link
+                      to="/orders"
+                      className="account-dropdown__item"
+                      onClick={() => setAccountOpen(false)}
+                    >
+                      My Orders
+                    </Link>
+                    <button
+                      type="button"
+                      className="account-dropdown__item account-dropdown__item--danger"
+                      onClick={handleSignOut}
+                    >
+                      Sign out
+                    </button>
+                  </>
+                ) : (
                   <button
                     type="button"
-                    className="account-dropdown__item account-dropdown__item--danger"
-                    onClick={handleSignOut}
+                    className="account-dropdown__item"
+                    onClick={() => { setAccountOpen(false); navigate('/login') }}
                   >
-                    Sign out
+                    Sign in
                   </button>
-                </>
-              ) : (
-                <button
-                  type="button"
-                  className="account-dropdown__item"
-                  onClick={() => { setAccountOpen(false); navigate('/login') }}
-                >
-                  Sign in
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* Cart */}
-        <Link to="/cart" className="cart-pill">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-            <line x1="3" y1="6" x2="21" y2="6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-            <path d="M16 10a4 4 0 01-8 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-          <div className="cart-pill__text">
-            <span className="cart-pill__count">{count} {count === 1 ? 'item' : 'items'}</span>
-            <span className="cart-pill__total">{formattedTotal}</span>
+                )}
+              </div>
+            )}
           </div>
-        </Link>
 
-      </div>
-    </header>
+          {/* Cart */}
+          <Link to="/cart" className="cart-pill">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+              <line x1="3" y1="6" x2="21" y2="6" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+              <path d="M16 10a4 4 0 01-8 0" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            <div className="cart-pill__text">
+              <span className="cart-pill__count">{count} {count === 1 ? 'item' : 'items'}</span>
+              <span className="cart-pill__total">{formattedTotal}</span>
+            </div>
+          </Link>
+
+        </div>
+      </header>
+
+      {locationOpen && (
+        <LocationPicker onClose={() => setLocationOpen(false)} />
+      )}
+    </>
   )
 }

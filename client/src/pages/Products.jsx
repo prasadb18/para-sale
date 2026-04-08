@@ -7,98 +7,78 @@ import useCartStore from '../store/cartStore'
 
 const PAGE_SIZE = 24
 
+// filter values: 'all' | 'instock' | 'offer'
+
 export default function Products() {
   const { categorySlug } = useParams()
-  const [searchParams] = useSearchParams()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
   const [page, setPage] = useState(1)
   const addItem = useCartStore(s => s.addItem)
   const navigate = useNavigate()
   const searchQuery = searchParams.get('q')?.trim() || ''
-  const filterInStock = searchParams.get('filter') === 'instock'
+  const activeFilter = searchParams.get('filter') || 'all'
 
   useEffect(() => {
     let isMounted = true
-
     setLoading(true)
     setPage(1)
     getProducts(categorySlug, searchQuery)
-      .then(res => {
-        if (isMounted) setProducts(res.data || [])
-      })
-      .finally(() => {
-        if (isMounted) setLoading(false)
-      })
-
-    return () => {
-      isMounted = false
-    }
+      .then(res => { if (isMounted) setProducts(res.data || []) })
+      .finally(() => { if (isMounted) setLoading(false) })
+    return () => { isMounted = false }
   }, [categorySlug, searchQuery])
 
   // Reset to page 1 when filter changes
-  useEffect(() => {
-    setPage(1)
-  }, [filterInStock])
+  useEffect(() => { setPage(1) }, [activeFilter])
+
+  const setFilter = (value) => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev)
+      if (value === 'all') next.delete('filter')
+      else next.set('filter', value)
+      return next
+    })
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 
   const categoryLabel = formatCategoryLabel(categorySlug)
-  const discountedProducts = products.filter(
-    product => Number(product.mrp || 0) > Number(product.price || 0)
-  )
-  const inStockProducts = products.filter(product => Number(product.stock || 0) > 0)
+  const discountedProducts = products.filter(p => Number(p.mrp || 0) > Number(p.price || 0))
+  const inStockProducts = products.filter(p => Number(p.stock || 0) > 0)
   const hasSearch = Boolean(searchQuery)
 
-  const displayedProducts = filterInStock ? inStockProducts : products
+  const displayedProducts =
+    activeFilter === 'instock' ? inStockProducts
+    : activeFilter === 'offer' ? discountedProducts
+    : products
+
   const totalPages = Math.ceil(displayedProducts.length / PAGE_SIZE)
   const pageProducts = displayedProducts.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
-  const heroEyebrow = filterInStock
-    ? 'In stock'
-    : hasSearch
-      ? 'Search results'
-      : categorySlug
-        ? 'Category aisle'
-        : 'Catalog'
+  const heroTitle = hasSearch
+    ? `Results for "${searchQuery}"`
+    : categorySlug ? categoryLabel : 'All products'
 
-  const heroTitle = filterInStock
-    ? 'In Stock Products'
-    : hasSearch
-      ? `Results for "${searchQuery}"`
-      : categorySlug
-        ? categoryLabel
-        : 'All products'
+  const heroEyebrow = hasSearch ? 'Search results' : categorySlug ? 'Category' : 'Catalog'
 
-  const heroCopy = filterInStock
-    ? 'Showing only products currently available in stock and ready to ship.'
-    : hasSearch
-      ? 'Search now scans product name, brand, and description so the navbar search leads somewhere useful.'
-      : categorySlug
-        ? 'Browse this category and add items straight to your cart.'
-        : 'Browse the full active catalog and use the search bar to quickly narrow things down.'
+  const sectionTitle =
+    activeFilter === 'instock' ? `${inStockProducts.length} in-stock products`
+    : activeFilter === 'offer' ? `${discountedProducts.length} products on offer`
+    : hasSearch ? `Matching products` : categorySlug ? `${categoryLabel}` : 'Browse all products'
 
-  const sectionTitle = filterInStock
-    ? `${inStockProducts.length} items in stock`
-    : hasSearch
-      ? `Matching products`
-      : categorySlug
-        ? `${categoryLabel} picks`
-        : 'Browse all products'
+  const emptyTitle =
+    activeFilter === 'instock' ? 'No products in stock'
+    : activeFilter === 'offer' ? 'No discounted products'
+    : hasSearch ? 'No products matched your search'
+    : categorySlug ? 'No products in this category' : 'No products available yet'
 
-  const emptyTitle = hasSearch
-    ? 'No products matched your search'
-    : filterInStock
-      ? 'No products in stock'
-      : categorySlug
-        ? 'No products in this aisle'
-        : 'No products available yet'
-
-  const emptyCopy = hasSearch
-    ? 'Try a different keyword, brand name, or shorter phrase.'
-    : filterInStock
-      ? 'Check back soon — stock is updated regularly.'
-      : categorySlug
-        ? 'Try another category or add new inventory from the admin side.'
-        : 'Add inventory from the admin side to populate the storefront.'
+  const emptyCopy =
+    activeFilter === 'instock' ? 'Check back soon — stock is updated regularly.'
+    : activeFilter === 'offer' ? 'No offers right now. Browse all products instead.'
+    : hasSearch ? 'Try a different keyword or shorter phrase.'
+    : categorySlug ? 'Try another category or add inventory from admin.'
+    : 'Add inventory from the admin side to populate the storefront.'
 
   const goToPage = (p) => {
     setPage(p)
@@ -107,25 +87,15 @@ export default function Products() {
 
   const getPageNumbers = () => {
     if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1)
-    const pages = []
-    if (page <= 4) {
-      pages.push(1, 2, 3, 4, 5, '...', totalPages)
-    } else if (page >= totalPages - 3) {
-      pages.push(1, '...', totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages)
-    } else {
-      pages.push(1, '...', page - 1, page, page + 1, '...', totalPages)
-    }
-    return pages
+    if (page <= 4) return [1, 2, 3, 4, 5, '...', totalPages]
+    if (page >= totalPages - 3) return [1, '...', totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages]
+    return [1, '...', page - 1, page, page + 1, '...', totalPages]
   }
 
   return (
     <div className="storefront-page">
       <section className="catalog-hero shell reveal">
-        <button
-          type="button"
-          className="text-link"
-          onClick={() => navigate('/')}
-        >
+        <button type="button" className="text-link" onClick={() => navigate('/')}>
           ← {categorySlug ? 'Back to categories' : 'Back to store'}
         </button>
 
@@ -133,22 +103,33 @@ export default function Products() {
           <div className="catalog-hero__content">
             <p className="eyebrow">{heroEyebrow}</p>
             <h1 className="catalog-hero__title">{heroTitle}</h1>
-            <p className="catalog-hero__copy">{heroCopy}</p>
           </div>
 
           <div className="catalog-hero__metrics">
-            <div className="stat-tile">
+            <button
+              type="button"
+              className={`stat-tile stat-tile--btn ${activeFilter === 'all' ? 'stat-tile--active' : ''}`}
+              onClick={() => setFilter('all')}
+            >
               <strong>{products.length}</strong>
               <span>products</span>
-            </div>
-            <div className="stat-tile">
+            </button>
+            <button
+              type="button"
+              className={`stat-tile stat-tile--btn ${activeFilter === 'offer' ? 'stat-tile--active' : ''}`}
+              onClick={() => setFilter('offer')}
+            >
               <strong>{discountedProducts.length}</strong>
               <span>on offer</span>
-            </div>
-            <div className="stat-tile">
+            </button>
+            <button
+              type="button"
+              className={`stat-tile stat-tile--btn ${activeFilter === 'instock' ? 'stat-tile--active' : ''}`}
+              onClick={() => setFilter('instock')}
+            >
               <strong>{inStockProducts.length}</strong>
               <span>ready stock</span>
-            </div>
+            </button>
           </div>
         </div>
       </section>
@@ -156,25 +137,27 @@ export default function Products() {
       <section className="storefront-section shell">
         <div className="section-header">
           <div>
-            <p className="eyebrow">Products</p>
             <h2 className="section-title">{sectionTitle}</h2>
           </div>
-          {!loading && displayedProducts.length > 0 && (
+          {!loading && displayedProducts.length > 0 && totalPages > 1 && (
             <p className="catalog-note">
-              {displayedProducts.length} products &nbsp;·&nbsp; page {page} of {totalPages}
+              page {page} of {totalPages}
             </p>
           )}
         </div>
 
         {loading ? (
-          <div className="loading-state">
-            <p>Loading products...</p>
-          </div>
+          <div className="loading-state"><p>Loading products...</p></div>
         ) : displayedProducts.length === 0 ? (
           <div className="empty-state">
             <p className="empty-state__icon">📦</p>
             <h3 className="empty-state__title">{emptyTitle}</h3>
             <p>{emptyCopy}</p>
+            {activeFilter !== 'all' && (
+              <button type="button" className="button button--primary" style={{ marginTop: 16 }} onClick={() => setFilter('all')}>
+                Show all products
+              </button>
+            )}
           </div>
         ) : (
           <>
