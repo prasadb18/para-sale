@@ -7,7 +7,8 @@
     <title>1ShopStore — Hardware, Electricals & Paints</title>
     <meta name="description" content="10-minute delivery of hardware, electricals, sanitaryware and paints in Palava & Dombivli East." />
 
-    <!-- PWA / Theme -->
+    <!-- PWA -->
+    <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#0c64c0" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -20,16 +21,22 @@
     <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152x152.png" />
     <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192x192.png" />
 
-    <!-- Open Graph (share previews) -->
+    <!-- Open Graph -->
     <meta property="og:type" content="website" />
     <meta property="og:title" content="1ShopStore — Hardware, Electricals & Paints" />
     <meta property="og:description" content="10-minute delivery of hardware, electricals, sanitaryware and paints in Palava & Dombivli East." />
     <meta property="og:image" content="/icons/icon-512x512.png" />
-
-    <!-- Manifest injected by vite-plugin-pwa -->
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .catch(() => {}) // fail silently — app works without SW
+        })
+      }
+    </script>
   </body>
 </html>
