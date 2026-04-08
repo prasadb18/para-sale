@@ -32,8 +32,13 @@ export default function Home() {
   const inStockProducts = products.filter(p => Number(p.stock || 0) > 0)
   const primaryCategory = categories[0]
 
-  const scrollToCategories = () =>
-    document.getElementById('store-categories')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  const scrollToCategories = () => {
+    const el = document.getElementById('store-categories')
+    if (!el) return
+    const navbarHeight = document.querySelector('.topbar')?.offsetHeight || 72
+    const top = el.getBoundingClientRect().top + window.scrollY - navbarHeight - 12
+    window.scrollTo({ top, behavior: 'smooth' })
+  }
 
   return (
     <div className="storefront-page">
