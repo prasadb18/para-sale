@@ -5,11 +5,14 @@ import ProductCard from '../components/ProductCard'
 import { formatCategoryLabel } from '../lib/storefront'
 import useCartStore from '../store/cartStore'
 
+const PAGE_SIZE = 24
+
 export default function Products() {
   const { categorySlug } = useParams()
   const [searchParams] = useSearchParams()
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
+  const [page, setPage] = useState(1)
   const addItem = useCartStore(s => s.addItem)
   const navigate = useNavigate()
   const searchQuery = searchParams.get('q')?.trim() || ''
@@ -19,6 +22,7 @@ export default function Products() {
     let isMounted = true
 
     setLoading(true)
+    setPage(1)
     getProducts(categorySlug, searchQuery)
       .then(res => {
         if (isMounted) setProducts(res.data || [])
@@ -32,6 +36,11 @@ export default function Products() {
     }
   }, [categorySlug, searchQuery])
 
+  // Reset to page 1 when filter changes
+  useEffect(() => {
+    setPage(1)
+  }, [filterInStock])
+
   const categoryLabel = formatCategoryLabel(categorySlug)
   const discountedProducts = products.filter(
     product => Number(product.mrp || 0) > Number(product.price || 0)
@@ -40,6 +49,8 @@ export default function Products() {
   const hasSearch = Boolean(searchQuery)
 
   const displayedProducts = filterInStock ? inStockProducts : products
+  const totalPages = Math.ceil(displayedProducts.length / PAGE_SIZE)
+  const pageProducts = displayedProducts.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   const heroEyebrow = filterInStock
     ? 'In stock'
@@ -62,7 +73,7 @@ export default function Products() {
     : hasSearch
       ? 'Search now scans product name, brand, and description so the navbar search leads somewhere useful.'
       : categorySlug
-        ? 'This catalog view now behaves like a proper shopping app lane: clearer compare, easier add-to-cart, and stronger visual hierarchy.'
+        ? 'Browse this category and add items straight to your cart.'
         : 'Browse the full active catalog and use the search bar to quickly narrow things down.'
 
   const sectionTitle = filterInStock
@@ -89,13 +100,31 @@ export default function Products() {
         ? 'Try another category or add new inventory from the admin side.'
         : 'Add inventory from the admin side to populate the storefront.'
 
+  const goToPage = (p) => {
+    setPage(p)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
+  const getPageNumbers = () => {
+    if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1)
+    const pages = []
+    if (page <= 4) {
+      pages.push(1, 2, 3, 4, 5, '...', totalPages)
+    } else if (page >= totalPages - 3) {
+      pages.push(1, '...', totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1, totalPages)
+    } else {
+      pages.push(1, '...', page - 1, page, page + 1, '...', totalPages)
+    }
+    return pages
+  }
+
   return (
     <div className="storefront-page">
       <section className="catalog-hero shell reveal">
         <button
           type="button"
           className="text-link"
-          onClick={() => navigate(categorySlug ? '/' : '/')}
+          onClick={() => navigate('/')}
         >
           ← {categorySlug ? 'Back to categories' : 'Back to store'}
         </button>
@@ -129,15 +158,12 @@ export default function Products() {
           <div>
             <p className="eyebrow">Products</p>
             <h2 className="section-title">{sectionTitle}</h2>
-            <p className="section-copy">
-              {hasSearch
-                ? 'Use the navbar search to refine results, then open a product or add it straight to the cart.'
-                : 'Tap a card for details or add an item straight to the cart from the grid.'}
-            </p>
           </div>
-          <p className="catalog-note">
-            {hasSearch ? `${products.length} results found.` : 'Updated for a more commerce-first feel.'}
-          </p>
+          {!loading && displayedProducts.length > 0 && (
+            <p className="catalog-note">
+              {displayedProducts.length} products &nbsp;·&nbsp; page {page} of {totalPages}
+            </p>
+          )}
         </div>
 
         {loading ? (
@@ -151,16 +177,57 @@ export default function Products() {
             <p>{emptyCopy}</p>
           </div>
         ) : (
-          <div className="product-grid">
-            {displayedProducts.map(product => (
-              <ProductCard
-                key={product.id}
-                product={product}
-                onSelect={() => navigate(`/product/${product.id}`)}
-                onAdd={addItem}
-              />
-            ))}
-          </div>
+          <>
+            <div className="product-grid">
+              {pageProducts.map(product => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  onSelect={() => navigate(`/product/${product.id}`)}
+                  onAdd={addItem}
+                />
+              ))}
+            </div>
+
+            {totalPages > 1 && (
+              <div className="pagination">
+                <button
+                  type="button"
+                  className="pagination__btn"
+                  disabled={page === 1}
+                  onClick={() => goToPage(page - 1)}
+                >
+                  ← Prev
+                </button>
+
+                <div className="pagination__pages">
+                  {getPageNumbers().map((p, i) =>
+                    p === '...' ? (
+                      <span key={`ellipsis-${i}`} className="pagination__ellipsis">…</span>
+                    ) : (
+                      <button
+                        key={p}
+                        type="button"
+                        className={`pagination__page ${page === p ? 'pagination__page--active' : ''}`}
+                        onClick={() => goToPage(p)}
+                      >
+                        {p}
+                      </button>
+                    )
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  className="pagination__btn"
+                  disabled={page === totalPages}
+                  onClick={() => goToPage(page + 1)}
+                >
+                  Next →
+                </button>
+              </div>
+            )}
+          </>
         )}
       </section>
     </div>
