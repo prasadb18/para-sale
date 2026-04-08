@@ -5,13 +5,13 @@ import { supabase } from '../../lib/supabase'
 
 const UNITS = ['piece', 'metre', 'kg', 'litre', 'box', 'roll', 'bag']
 
-const CSV_HEADERS = ['name', 'description', 'brand', 'price', 'mrp', 'stock', 'unit', 'category_name', 'image_url', 'is_active']
+const CSV_HEADERS = ['name', 'description', 'brand', 'spec', 'price', 'mrp', 'stock', 'unit', 'category_name', 'image_url', 'is_active']
 
 function downloadTemplate() {
   const sample = [
     CSV_HEADERS.join(','),
-    '"Example Drill Bit Set","10-piece HSS drill bit set","Bosch","499","599","50","piece","Tools","","true"',
-    '"PVC Pipe 1 inch","1 metre rigid PVC pipe","Finolex","35","40","200","metre","Plumbing","","true"'
+    '"Example Drill Bit Set","10-piece HSS drill bit set","Bosch","10-piece HSS","499","599","50","piece","Tools","","true"',
+    '"PVC Pipe 1 inch","1 metre rigid PVC pipe","Finolex","1 inch dia","35","40","200","metre","Plumbing","","true"'
   ].join('\n')
   const blob = new Blob([sample], { type: 'text/csv' })
   const url = URL.createObjectURL(blob)
@@ -79,6 +79,7 @@ export default function AdminProducts() {
     setForm({
       name: product.name,
       description: product.description || '',
+      spec: product.spec || '',
       price: product.price,
       mrp: product.mrp || '',
       stock: product.stock,
@@ -153,6 +154,7 @@ export default function AdminProducts() {
           name: row.name,
           description: row.description || '',
           brand: row.brand || '',
+          spec: row.spec || '',
           price: parseFloat(row.price) || 0,
           mrp: row.mrp ? parseFloat(row.mrp) : null,
           stock: parseInt(row.stock) || 0,
@@ -262,6 +264,7 @@ export default function AdminProducts() {
                         {[
                           { label: 'Name', key: 'name', type: 'text' },
                           { label: 'Brand', key: 'brand', type: 'text' },
+                          { label: 'Spec', key: 'spec', type: 'text' },
                           { label: 'Price (₹)', key: 'price', type: 'number' },
                           { label: 'MRP (₹)', key: 'mrp', type: 'number' },
                           { label: 'Stock', key: 'stock', type: 'number' },

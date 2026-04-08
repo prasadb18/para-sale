@@ -57,6 +57,10 @@ export default function ProductCard({
           {product.name}
         </button>
 
+        {product.spec ? (
+          <span className="product-card__spec">{product.spec}</span>
+        ) : null}
+
         <p className="product-card__meta">
           {product.brand || '1ShopStore Select'} · {deliveryMessage}
         </p>

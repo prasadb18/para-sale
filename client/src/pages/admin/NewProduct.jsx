@@ -10,7 +10,7 @@ export default function NewProduct() {
   const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(false)
   const [form, setForm] = useState({
-    name: '', description: '', brand: '',
+    name: '', description: '', brand: '', spec: '',
     price: '', mrp: '', stock: '', unit: 'piece',
     category_id: '', image_url: '', is_active: true
   })
@@ -85,6 +85,11 @@ export default function NewProduct() {
                 ))}
               </select>
             </div>
+          </div>
+
+          <div className="field" style={{ marginTop: 12 }}>
+            <span>Spec <span style={{ color: 'var(--text-soft)', fontWeight: 400, fontSize: '0.8rem' }}>(short technical detail shown on card — e.g. 15A · 240V)</span></span>
+            <input className="input" placeholder="e.g. 15A, 240V  or  2.5 sq mm  or  100W E27" value={form.spec} onChange={set('spec')} />
           </div>
         </div>
 
