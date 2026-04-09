@@ -8,6 +8,7 @@ import { formatCurrency, getEtaByLocation } from '../lib/storefront'
 import { supabase } from '../lib/supabase'
 import { validateAddressForm } from '../lib/validation'
 import { ensureProfile } from '../lib/profile'
+import { trackPurchase } from '../lib/analytics'
 
 const initialAddressForm = {
   label: 'Site',
@@ -269,6 +270,7 @@ export default function Checkout() {
       await supabase.rpc('decrement_stock', { product_id: item.id, qty: item.qty })
     }
 
+    trackPurchase({ orderId: order.id, total: grandTotal, deliveryCharge, items })
     clearCart()
     setOrderId(order.id)
     setStep('success')

@@ -4,6 +4,76 @@ import { getProduct } from '../api'
 import { formatCurrency, getDiscountPercent } from '../lib/storefront'
 import useCartStore from '../store/cartStore'
 
+const RETURN_POLICIES = [
+  {
+    match: /electric|wire|cable|switch|socket|mcb|breaker|light|led|fan|fitting/i,
+    icon: '⚡',
+    title: 'Electricals — Exchange only',
+    lines: [
+      'Non-returnable once installed or packaging is opened.',
+      'Manufacturing defects exchangeable within 7 days with proof of purchase.',
+      'Bring the item unused and in original packaging for exchange.'
+    ]
+  },
+  {
+    match: /pipe|tap|fitting|plumb|sanit|basin|toilet|valve/i,
+    icon: '🔧',
+    title: 'Plumbing & Sanitaryware — Exchange only',
+    lines: [
+      'Non-returnable once fitted or sealed packaging is opened.',
+      'Manufacturing defects exchangeable within 7 days.',
+      'Physical damage during installation is not covered.'
+    ]
+  },
+  {
+    match: /paint|primer|putty|varnish|enamel|wood finish/i,
+    icon: '🎨',
+    title: 'Paints & Finishes — No returns',
+    lines: [
+      'Paints cannot be returned once the can is opened.',
+      'Verify shade and finish before use — custom tints are final.',
+      'Contact us within 24 hours of delivery for any supply issue.'
+    ]
+  },
+  {
+    match: /tool|drill|saw|hammer|screw|nut|bolt|fastener|anchor/i,
+    icon: '🛠️',
+    title: 'Tools & Hardware — 7-day exchange',
+    lines: [
+      'Exchange within 7 days for manufacturing defects.',
+      'Original packaging and accessories must be included.',
+      'Items with signs of use or damage are not eligible.'
+    ]
+  }
+]
+
+const DEFAULT_POLICY = {
+  icon: '🔄',
+  title: '7-day exchange on defects',
+  lines: [
+    'Items can be exchanged within 7 days for manufacturing defects.',
+    'Proof of purchase required. Original packaging preferred.',
+    'Contact us via WhatsApp or visit the store for a quick resolution.'
+  ]
+}
+
+function ReturnPolicy({ category }) {
+  const cat = category || ''
+  const policy = RETURN_POLICIES.find(p => p.match.test(cat)) || DEFAULT_POLICY
+  return (
+    <div className="return-policy">
+      <p className="return-policy__heading">
+        <span>{policy.icon}</span> {policy.title}
+      </p>
+      <ul className="return-policy__list">
+        {policy.lines.map((line, i) => (
+          <li key={i}>{line}</li>
+        ))}
+      </ul>
+    </div>
+  )
+}
+
 export default function ProductDetail() {
   const { id } = useParams()
   const [product, setProduct] = useState(null)
@@ -158,6 +228,8 @@ export default function ProductDetail() {
               Go to cart
             </button>
           </div>
+
+          <ReturnPolicy category={product.categories?.name} />
         </div>
       </div>
     </div>

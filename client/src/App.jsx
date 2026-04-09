@@ -1,6 +1,7 @@
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { useEffect } from 'react'
 import './App.css'
+import { initAnalytics, trackPageView } from './lib/analytics'
 import Home from './pages/Home'
 import Products from './pages/Products'
 import ProductDetail from './pages/ProductDetail'
@@ -8,6 +9,7 @@ import Cart from './pages/Cart'
 import Login from './pages/Login'
 import Checkout from './pages/Checkout'
 import Orders from './pages/Orders'
+import ResetPassword from './pages/ResetPassword'
 import Dashboard from './pages/admin/Dashboard'
 import AdminOrders from './pages/admin/Orders'
 import AdminProducts from './pages/admin/Products'
@@ -53,20 +55,29 @@ function StorefrontPage({ children }) {
   )
 }
 
+function PageTracker() {
+  const location = useLocation()
+  useEffect(() => { trackPageView(location.pathname) }, [location.pathname])
+  return null
+}
+
 export default function App() {
   const initAuth = useAuthStore(s => s.initAuth)
 
   useEffect(() => {
+    initAnalytics()
     initAuth()
   }, [initAuth])
 
   return (
     <Routes>
+      <Route path="*" element={<PageTracker />} />
       <Route path="/" element={<StorefrontPage><Home /></StorefrontPage>} />
       <Route path="/products" element={<StorefrontPage><Products /></StorefrontPage>} />
       <Route path="/products/:categorySlug" element={<StorefrontPage><Products /></StorefrontPage>} />
       <Route path="/product/:id" element={<StorefrontPage><ProductDetail /></StorefrontPage>} />
       <Route path="/login" element={<StorefrontPage><Login /></StorefrontPage>} />
+      <Route path="/reset-password" element={<StorefrontPage><ResetPassword /></StorefrontPage>} />
       <Route path="/cart" element={<StorefrontPage><Cart /></StorefrontPage>} />
       <Route path="/checkout" element={<StorefrontPage><Checkout /></StorefrontPage>} />
       <Route path="/orders" element={<StorefrontPage><ProtectedRoute><Orders /></ProtectedRoute></StorefrontPage>} />

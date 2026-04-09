@@ -255,6 +255,11 @@
   text-decoration: underline;
 }
 
+.text-link--sm {
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
 /* ============================================================
    NAVBAR / TOPBAR — Blinkit style
    ============================================================ */
@@ -1526,6 +1531,38 @@
   flex-wrap: wrap;
 }
 
+.return-policy {
+  margin-top: 20px;
+  padding: 14px 16px;
+  background: #f8fafb;
+  border: 1px solid #e4eaf0;
+  border-radius: 10px;
+}
+
+.return-policy__heading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 8px;
+}
+
+.return-policy__list {
+  margin: 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.return-policy__list li {
+  font-size: 0.8rem;
+  color: var(--text-soft);
+  line-height: 1.5;
+}
+
 /* ============================================================
    CART
    ============================================================ */
@@ -2094,6 +2131,37 @@
 }
 
 .error-banner,
+.field__label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.reset-success {
+  text-align: center;
+  padding: 12px 0;
+}
+
+.reset-success__icon {
+  font-size: 2.2rem;
+  display: block;
+  margin-bottom: 10px;
+}
+
+.reset-success__title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 6px;
+}
+
+.reset-success__sub {
+  font-size: 0.85rem;
+  color: var(--text-soft);
+  line-height: 1.5;
+  margin: 0;
+}
+
 .helper-note {
   padding: 10px 14px;
   border-radius: var(--radius-md);

@@ -9,20 +9,18 @@ export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isSignup, setIsSignup] = useState(false)
+  const [mode, setMode] = useState('auth') // 'auth' | 'forgot'
   const [error, setError] = useState('')
   const [fieldErrors, setFieldErrors] = useState({})
   const [loading, setLoading] = useState(false)
+  const [resetSent, setResetSent] = useState(false)
   const { setUser, setSession } = useAuthStore()
   const navigate = useNavigate()
 
   const handleSubmit = async (event) => {
     event?.preventDefault()
     setError('')
-    const { errors, normalizedEmail } = validateLoginForm({
-      email,
-      password,
-      isSignup
-    })
+    const { errors, normalizedEmail } = validateLoginForm({ email, password, isSignup })
 
     if (Object.keys(errors).length > 0) {
       setFieldErrors(errors)
@@ -50,16 +48,12 @@ export default function Login() {
         setLoading(false)
         return
       }
-
       setSession(data.session)
       setUser(data.user)
       navigate('/')
     } else if (isSignup) {
       const { data: signInData, error: signInError } =
-        await supabase.auth.signInWithPassword({
-          email: normalizedEmail,
-          password
-        })
+        await supabase.auth.signInWithPassword({ email: normalizedEmail, password })
 
       if (signInData?.session) {
         const { error: profileError } = await ensureProfile(signInData.user)
@@ -68,7 +62,6 @@ export default function Login() {
           setLoading(false)
           return
         }
-
         setSession(signInData.session)
         setUser(signInData.user)
         navigate('/')
@@ -78,6 +71,41 @@ export default function Login() {
     }
 
     setLoading(false)
+  }
+
+  const handleForgotPassword = async (event) => {
+    event?.preventDefault()
+    setError('')
+    const normalized = normalizeEmail(email)
+    if (!normalized || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
+      setFieldErrors({ email: 'Enter a valid email address.' })
+      return
+    }
+    setFieldErrors({})
+    setLoading(true)
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(normalized, {
+      redirectTo: `${window.location.origin}/reset-password`
+    })
+    setLoading(false)
+    if (resetError) {
+      setError(resetError.message)
+    } else {
+      setResetSent(true)
+    }
+  }
+
+  const switchToForgot = () => {
+    setMode('forgot')
+    setError('')
+    setFieldErrors({})
+    setResetSent(false)
+  }
+
+  const switchToAuth = () => {
+    setMode('auth')
+    setError('')
+    setFieldErrors({})
+    setResetSent(false)
   }
 
   return (
@@ -116,92 +144,162 @@ export default function Login() {
             </div>
           </div>
 
-          <div>
-            <h2 className="card-title">
-              {isSignup ? 'Create your account' : 'Welcome back'}
-            </h2>
-            <p className="card-copy">
-              {isSignup
-                ? 'Set up your account to start shopping and saving addresses.'
-                : 'Log in to continue with cart, checkout, and order tracking.'}
-            </p>
-          </div>
+          {mode === 'forgot' ? (
+            /* ── Forgot password ────────────────────────────── */
+            <>
+              <div>
+                <h2 className="card-title">Reset your password</h2>
+                <p className="card-copy">
+                  Enter the email you signed up with and we'll send a reset link.
+                </p>
+              </div>
 
-          <form className="login-form" onSubmit={handleSubmit} noValidate>
-            <label className="field">
-              <span>Email</span>
-              <input
-                className={`input${fieldErrors.email ? ' input--invalid' : ''}`}
-                type="email"
-                placeholder="you@example.com"
-                autoComplete="email"
-                maxLength={120}
-                value={email}
-                onChange={e => {
-                  setEmail(e.target.value)
-                  setFieldErrors((current) => ({ ...current, email: '' }))
-                  setError('')
-                }}
-                onBlur={() => setEmail(normalizeEmail(email))}
-              />
-              {fieldErrors.email ? (
-                <span className="field__message field__message--error">
-                  {fieldErrors.email}
-                </span>
+              {resetSent ? (
+                <div className="reset-success">
+                  <span className="reset-success__icon">✉️</span>
+                  <p className="reset-success__title">Check your email</p>
+                  <p className="reset-success__sub">
+                    A password reset link has been sent to <strong>{email}</strong>.
+                    It expires in 1 hour.
+                  </p>
+                  <button
+                    type="button"
+                    className="button button--secondary button--full"
+                    style={{ marginTop: 12 }}
+                    onClick={switchToAuth}
+                  >
+                    Back to sign in
+                  </button>
+                </div>
+              ) : (
+                <form className="login-form" onSubmit={handleForgotPassword} noValidate>
+                  <label className="field">
+                    <span>Email</span>
+                    <input
+                      className={`input${fieldErrors.email ? ' input--invalid' : ''}`}
+                      type="email"
+                      placeholder="you@example.com"
+                      autoComplete="email"
+                      value={email}
+                      onChange={e => {
+                        setEmail(e.target.value)
+                        setFieldErrors(prev => ({ ...prev, email: '' }))
+                        setError('')
+                      }}
+                      onBlur={() => setEmail(normalizeEmail(email))}
+                    />
+                    {fieldErrors.email ? (
+                      <span className="field__message field__message--error">{fieldErrors.email}</span>
+                    ) : null}
+                  </label>
+
+                  {error ? <p className="error-banner">{error}</p> : null}
+
+                  <button
+                    type="submit"
+                    className="button button--primary button--full"
+                    disabled={loading}
+                  >
+                    {loading ? 'Sending...' : 'Send reset link'}
+                  </button>
+                </form>
+              )}
+
+              {!resetSent ? (
+                <button type="button" className="text-link" onClick={switchToAuth}>
+                  ← Back to sign in
+                </button>
               ) : null}
-            </label>
+            </>
+          ) : (
+            /* ── Sign in / Sign up ──────────────────────────── */
+            <>
+              <div>
+                <h2 className="card-title">
+                  {isSignup ? 'Create your account' : 'Welcome back'}
+                </h2>
+                <p className="card-copy">
+                  {isSignup
+                    ? 'Set up your account to start shopping and saving addresses.'
+                    : 'Log in to continue with cart, checkout, and order tracking.'}
+                </p>
+              </div>
 
-            <label className="field">
-              <span>Password</span>
-              <input
-                className={`input${fieldErrors.password ? ' input--invalid' : ''}`}
-                type="password"
-                placeholder={isSignup ? 'At least 6 characters' : 'Enter your password'}
-                autoComplete={isSignup ? 'new-password' : 'current-password'}
-                minLength={isSignup ? 6 : undefined}
-                value={password}
-                onChange={e => {
-                  setPassword(e.target.value)
-                  setFieldErrors((current) => ({ ...current, password: '' }))
+              <form className="login-form" onSubmit={handleSubmit} noValidate>
+                <label className="field">
+                  <span>Email</span>
+                  <input
+                    className={`input${fieldErrors.email ? ' input--invalid' : ''}`}
+                    type="email"
+                    placeholder="you@example.com"
+                    autoComplete="email"
+                    maxLength={120}
+                    value={email}
+                    onChange={e => {
+                      setEmail(e.target.value)
+                      setFieldErrors(prev => ({ ...prev, email: '' }))
+                      setError('')
+                    }}
+                    onBlur={() => setEmail(normalizeEmail(email))}
+                  />
+                  {fieldErrors.email ? (
+                    <span className="field__message field__message--error">{fieldErrors.email}</span>
+                  ) : null}
+                </label>
+
+                <label className="field">
+                  <div className="field__label-row">
+                    <span>Password</span>
+                    {!isSignup ? (
+                      <button type="button" className="text-link text-link--sm" onClick={switchToForgot}>
+                        Forgot password?
+                      </button>
+                    ) : null}
+                  </div>
+                  <input
+                    className={`input${fieldErrors.password ? ' input--invalid' : ''}`}
+                    type="password"
+                    placeholder={isSignup ? 'At least 6 characters' : 'Enter your password'}
+                    autoComplete={isSignup ? 'new-password' : 'current-password'}
+                    minLength={isSignup ? 6 : undefined}
+                    value={password}
+                    onChange={e => {
+                      setPassword(e.target.value)
+                      setFieldErrors(prev => ({ ...prev, password: '' }))
+                      setError('')
+                    }}
+                  />
+                  {fieldErrors.password ? (
+                    <span className="field__message field__message--error">{fieldErrors.password}</span>
+                  ) : null}
+                </label>
+
+                {error ? <p className="error-banner">{error}</p> : null}
+
+                <button
+                  type="submit"
+                  className="button button--primary button--full"
+                  disabled={loading}
+                >
+                  {loading ? 'Please wait...' : isSignup ? 'Create account' : 'Sign in'}
+                </button>
+              </form>
+
+              <button
+                type="button"
+                className="text-link"
+                onClick={() => {
+                  setIsSignup(!isSignup)
                   setError('')
+                  setFieldErrors({})
                 }}
-              />
-              {fieldErrors.password ? (
-                <span className="field__message field__message--error">
-                  {fieldErrors.password}
-                </span>
-              ) : null}
-            </label>
-
-            {error ? <p className="error-banner">{error}</p> : null}
-
-            <button
-              type="submit"
-              className="button button--primary button--full"
-              disabled={loading}
-            >
-              {loading ? 'Please wait...' : isSignup ? 'Create account' : 'Sign in'}
-            </button>
-          </form>
-
-          <button
-            type="button"
-            className="text-link"
-            onClick={() => {
-              setIsSignup(!isSignup)
-              setError('')
-              setFieldErrors({})
-            }}
-          >
-            {isSignup
-              ? 'Already have an account? Sign in'
-              : "Don't have an account? Create one"}
-          </button>
-
-          <div className="helper-note">
-            Dev mode is using email and password right now. Switch back to your
-            production auth approach before launch.
-          </div>
+              >
+                {isSignup
+                  ? 'Already have an account? Sign in'
+                  : "Don't have an account? Create one"}
+              </button>
+            </>
+          )}
         </section>
       </div>
     </div>

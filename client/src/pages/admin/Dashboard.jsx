@@ -107,7 +107,7 @@ export default function Dashboard() {
                 <p style={styles.orderId}>#{order.id.slice(0,8).toUpperCase()}</p>
                 <p style={styles.orderMeta}>
                   {order.order_items?.length} item(s) ·{' '}
-                  {order.addresses?.city}
+                  {order.addresses?.city || order.guest_address?.city || 'Guest'}
                 </p>
               </div>
               <div style={styles.orderRight}>

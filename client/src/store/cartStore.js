@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { trackAddToCart } from '../lib/analytics'
 
 const LOCAL_STORAGE_CART_KEY = '1shopstore_cart'
 
@@ -69,6 +70,7 @@ const useCartStore = create((set) => ({
           ]
 
       saveCartToStorage(nextItems)
+      trackAddToCart(product, existing ? existing.qty + 1 : 1)
       return {
         ...buildCartState(nextItems),
         notice: buildAddNotice(product, nextItems)

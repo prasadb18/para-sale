@@ -186,7 +186,9 @@ export default function AdminOrders() {
       if (
         !o.id.toLowerCase().includes(q) &&
         !o.profiles?.full_name?.toLowerCase().includes(q) &&
-        !o.profiles?.phone?.toLowerCase().includes(q)
+        !o.profiles?.phone?.toLowerCase().includes(q) &&
+        !o.guest_name?.toLowerCase().includes(q) &&
+        !o.guest_phone?.toLowerCase().includes(q)
       ) return false
     }
     return true
@@ -304,19 +306,32 @@ export default function AdminOrders() {
             {isOpen && (
               <div style={styles.details}>
                 <div style={styles.detailSection}>
-                  <p style={styles.detailLabel}>Customer</p>
+                  <p style={styles.detailLabel}>
+                    Customer{order.guest_name ? <span style={styles.guestTag}>Guest</span> : null}
+                  </p>
                   <p style={styles.detailText}>
-                    {order.profiles?.full_name || 'Not set'} · {order.profiles?.phone || 'No phone'}
+                    {order.guest_name || order.profiles?.full_name || 'Not set'}
+                    {' · '}
+                    {order.guest_phone || order.profiles?.phone || 'No phone'}
+                    {order.guest_email ? <><br /><span style={{ color: '#888' }}>{order.guest_email}</span></> : null}
                   </p>
                 </div>
 
                 <div style={styles.detailSection}>
                   <p style={styles.detailLabel}>Deliver to</p>
-                  <p style={styles.detailText}>
-                    {order.addresses?.label} — {order.addresses?.line1}
-                    {order.addresses?.line2 ? `, ${order.addresses.line2}` : ''},
-                    {' '}{order.addresses?.city}, {order.addresses?.pincode}
-                  </p>
+                  {order.guest_address ? (
+                    <p style={styles.detailText}>
+                      Guest — {order.guest_address.line1}
+                      {order.guest_address.line2 ? `, ${order.guest_address.line2}` : ''},{' '}
+                      {order.guest_address.city}, {order.guest_address.pincode}
+                    </p>
+                  ) : (
+                    <p style={styles.detailText}>
+                      {order.addresses?.label} — {order.addresses?.line1}
+                      {order.addresses?.line2 ? `, ${order.addresses.line2}` : ''},{' '}
+                      {order.addresses?.city}, {order.addresses?.pincode}
+                    </p>
+                  )}
                 </div>
 
                 <div style={styles.detailSection}>
@@ -438,7 +453,8 @@ const styles = {
 
   details:      { borderTop: '1px solid #f0f0f0', padding: '16px', background: '#fafafa' },
   detailSection:{ marginBottom: '16px' },
-  detailLabel:  { fontSize: '11px', fontWeight: '700', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 6px' },
+  detailLabel:  { display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', fontWeight: '700', color: '#aaa', textTransform: 'uppercase', letterSpacing: '0.5px', margin: '0 0 6px' },
+  guestTag:     { fontSize: '10px', fontWeight: '700', background: '#fff8e1', color: '#f39c12', padding: '1px 6px', borderRadius: '4px', textTransform: 'uppercase' },
   detailText:   { fontSize: '14px', color: '#333', margin: 0 },
   detailSubtext:{ fontSize: '12px', color: '#777', margin: '6px 0 0' },
   itemRow:      { display: 'flex', gap: '8px', padding: '6px 0', borderBottom: '1px solid #eee', fontSize: '14px' },
