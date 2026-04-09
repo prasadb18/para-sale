@@ -38,19 +38,21 @@ export default function ProductCard({
         ) : (
           <div className="product-card__placeholder">📦</div>
         )}
-        {discount > 0 ? (
-          <span className="product-card__badge">{discount}% off</span>
-        ) : (
-          <span className="product-card__badge product-card__badge--soft">
-            {deliveryMessage}
-          </span>
-        )}
       </button>
 
       <div className="product-card__body">
-        {showCategory && product.categories?.name ? (
-          <p className="product-card__category">{product.categories.name}</p>
-        ) : null}
+        <div className="product-card__pills">
+          {showCategory && product.categories?.name ? (
+            <p className="product-card__category">{product.categories.name}</p>
+          ) : null}
+          {discount > 0 ? (
+            <span className="product-card__badge">{discount}% off</span>
+          ) : (
+            <span className="product-card__badge product-card__badge--soft">
+              {deliveryMessage}
+            </span>
+          )}
+        </div>
 
         <button
           type="button"

@@ -1229,15 +1229,15 @@
 }
 
 .product-card__badge {
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  padding: 4px 8px;
-  border-radius: 5px;
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 4px;
   background: var(--accent);
   color: #ffffff;
-  font-size: 0.74rem;
+  font-size: 0.68rem;
   font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
 }
 
 .product-card__badge--soft {
@@ -1251,6 +1251,13 @@
   gap: 6px;
   padding: 12px 14px 14px;
   flex: 1;
+}
+
+.product-card__pills {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
 }
 
 .product-card__category {
@@ -2646,46 +2653,35 @@
 
 .site-footer__brand {
   display: flex;
-  align-items: start;
-  gap: 12px;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.site-footer__brand h2 {
-  margin: 0 0 8px;
-  font-size: 1.4rem;
-  font-weight: 700;
-  color: #ffffff;
-}
-
-.site-footer__brand .brand-mark__badge {
-  background: var(--accent);
-  flex-shrink: 0;
-}
-
-.site-footer__brand,
-.site-footer__title {
-  color: #ffffff;
-}
-
-.site-footer__links a {
-  color: rgba(255,255,255,0.72);
-}
-
-.site-footer__notes a {
-  color: rgba(255,255,255,0.72);
-}
-
-.site-footer__brand p,
-.site-footer__notes p,
-.site-footer__bottom p {
+.site-footer__brand p {
   color: rgba(255,255,255,0.55);
   font-size: 0.85rem;
   line-height: 1.6;
+  margin: 0;
 }
 
-.site-footer__notes {
-  display: grid;
-  gap: 8px;
+.site-footer__contact {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.site-footer__contact a {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: rgba(255,255,255,0.80);
+  transition: color 0.15s;
+}
+
+.site-footer__contact a:hover { color: #fff; }
+
+.site-footer__title {
+  color: #ffffff;
 }
 
 .site-footer__title {
@@ -2701,14 +2697,20 @@
   gap: 8px;
 }
 
-.site-footer__links a {
-  font-size: 0.88rem;
-  font-weight: 500;
+.site-footer__links a,
+.site-footer__links span {
+  font-size: 0.85rem;
+  font-weight: 400;
+  color: rgba(255,255,255,0.60);
   transition: color 0.15s ease;
 }
 
-.site-footer__links a:hover,
-.site-footer__notes a:hover {
+.site-footer__links a {
+  color: rgba(255,255,255,0.72);
+  font-weight: 500;
+}
+
+.site-footer__links a:hover {
   color: #ffffff;
 }
 
