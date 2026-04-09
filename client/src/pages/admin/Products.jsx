@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import ProductImageField from '../../components/admin/ProductImageField'
 import { supabase } from '../../lib/supabase'
+import { imgUrl } from '../../lib/imgUrl'
 
 const UNITS = ['piece', 'metre', 'kg', 'litre', 'box', 'roll', 'bag']
 
@@ -302,7 +303,7 @@ export default function AdminProducts() {
                   ) : (
                     <div className="admin-product-row">
                       {product.image_url ? (
-                        <img src={product.image_url} alt={product.name} className="admin-product-thumb" />
+                        <img src={imgUrl(product.image_url, { width: 80, quality: 70 })} alt={product.name} className="admin-product-thumb" loading="lazy" />
                       ) : (
                         <div className="admin-product-thumb admin-product-thumb--empty">📦</div>
                       )}

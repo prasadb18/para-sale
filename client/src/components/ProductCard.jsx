@@ -3,6 +3,7 @@ import {
   getDeliveryMessage,
   getDiscountPercent
 } from '../lib/storefront'
+import { imgUrl } from '../lib/imgUrl'
 
 export default function ProductCard({
   product,
@@ -29,8 +30,10 @@ export default function ProductCard({
         {product.image_url ? (
           <img
             className="product-card__img"
-            src={product.image_url}
+            src={imgUrl(product.image_url, { width: 320, quality: 75 })}
             alt={product.name}
+            loading="lazy"
+            decoding="async"
           />
         ) : (
           <div className="product-card__placeholder">📦</div>

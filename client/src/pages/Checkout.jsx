@@ -10,6 +10,32 @@ import { validateAddressForm } from '../lib/validation'
 import { ensureProfile } from '../lib/profile'
 import { trackPurchase } from '../lib/analytics'
 
+// ── Coupon definitions ────────────────────────────────────────────
+// type: 'percent' → discount % off subtotal
+// type: 'flat'    → fixed ₹ off subtotal
+// minOrder: minimum cart subtotal required
+const COUPONS = {
+  FIRST10:   { type: 'percent', value: 10, minOrder: 0,    label: '10% off your order' },
+  SAVE50:    { type: 'flat',    value: 50, minOrder: 500,  label: '₹50 off on orders above ₹500' },
+  BULK100:   { type: 'flat',    value: 100,minOrder: 1000, label: '₹100 off on orders above ₹1000' },
+  WELCOME:   { type: 'percent', value: 5,  minOrder: 0,    label: '5% welcome discount' },
+}
+
+function applyCoupon(code, subtotal) {
+  const coupon = COUPONS[code?.trim().toUpperCase()]
+  if (!coupon) return { valid: false, error: 'Invalid coupon code.' }
+  if (subtotal < coupon.minOrder) {
+    return {
+      valid: false,
+      error: `This coupon needs a minimum order of ${new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(coupon.minOrder)}.`
+    }
+  }
+  const discount = coupon.type === 'percent'
+    ? Math.round(subtotal * coupon.value / 100)
+    : coupon.value
+  return { valid: true, discount, label: coupon.label }
+}
+
 const initialAddressForm = {
   label: 'Site',
   line1: '',
@@ -58,12 +84,35 @@ export default function Checkout() {
   })
   const [guestErrors, setGuestErrors] = useState({})
 
+  // Coupon state
+  const [couponInput, setCouponInput] = useState('')
+  const [coupon, setCoupon] = useState(null)   // { discount, label } when valid
+  const [couponError, setCouponError] = useState('')
+
   const deliveryCity = isGuest ? guestInfo.city : selectedAddress?.city
   const deliveryCharge = total < 500 ? 50 : 0
-  const grandTotal = total + deliveryCharge
+  const couponDiscount = coupon?.discount || 0
+  const grandTotal = total + deliveryCharge - couponDiscount
   const freeDeliveryGap = Math.max(500 - total, 0)
   const itemCount = items.reduce((sum, item) => sum + item.qty, 0)
   const deliveryEta = getEtaByLocation(deliveryCity)
+
+  const handleApplyCoupon = () => {
+    setCouponError('')
+    const result = applyCoupon(couponInput, total)
+    if (result.valid) {
+      setCoupon({ discount: result.discount, label: result.label })
+    } else {
+      setCoupon(null)
+      setCouponError(result.error)
+    }
+  }
+
+  const handleRemoveCoupon = () => {
+    setCoupon(null)
+    setCouponInput('')
+    setCouponError('')
+  }
 
   useEffect(() => {
     if (items.length === 0 && step !== 'success') {
@@ -188,6 +237,8 @@ export default function Checkout() {
       payment_status: resolvedPaymentStatus,
       subtotal: total,
       delivery_charge: deliveryCharge,
+      discount: couponDiscount || null,
+      coupon_code: coupon ? couponInput.trim().toUpperCase() : null,
       total: grandTotal
     }
 
@@ -780,6 +831,13 @@ export default function Checkout() {
               </p>
             ) : null}
 
+            {coupon ? (
+              <div className="order-line coupon-applied-row">
+                <span>Coupon ({couponInput.toUpperCase()})</span>
+                <span className="coupon-discount">−{formatCurrency(couponDiscount)}</span>
+              </div>
+            ) : null}
+
             <div className="order-total">
               <span>Total</span>
               <strong>{formatCurrency(grandTotal)}</strong>
@@ -871,6 +929,43 @@ export default function Checkout() {
               <p className="summary-note">
                 Add {formatCurrency(freeDeliveryGap)} more for free delivery.
               </p>
+            ) : null}
+
+            {/* ── Coupon input ── */}
+            {!coupon ? (
+              <div className="coupon-row">
+                <input
+                  className="input coupon-input"
+                  placeholder="Coupon code"
+                  value={couponInput}
+                  onChange={e => { setCouponInput(e.target.value.toUpperCase()); setCouponError('') }}
+                  onKeyDown={e => e.key === 'Enter' && handleApplyCoupon()}
+                />
+                <button
+                  type="button"
+                  className="button button--secondary coupon-btn"
+                  onClick={handleApplyCoupon}
+                  disabled={!couponInput.trim()}
+                >
+                  Apply
+                </button>
+              </div>
+            ) : (
+              <div className="coupon-applied">
+                <div className="coupon-applied__info">
+                  <span className="coupon-applied__tag">🏷 {couponInput.toUpperCase()}</span>
+                  <span className="coupon-applied__label">{coupon.label}</span>
+                </div>
+                <button type="button" className="coupon-applied__remove" onClick={handleRemoveCoupon}>✕</button>
+              </div>
+            )}
+            {couponError ? <p className="coupon-error">{couponError}</p> : null}
+
+            {coupon ? (
+              <div className="bill-row coupon-applied-row">
+                <span>Discount</span>
+                <span className="coupon-discount">−{formatCurrency(couponDiscount)}</span>
+              </div>
             ) : null}
 
             <div className="bill-total">

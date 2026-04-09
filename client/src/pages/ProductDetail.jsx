@@ -3,6 +3,9 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { getProduct } from '../api'
 import { formatCurrency, getDiscountPercent } from '../lib/storefront'
 import useCartStore from '../store/cartStore'
+import { imgUrl } from '../lib/imgUrl'
+import { supabase } from '../lib/supabase'
+import ProductCard from '../components/ProductCard'
 
 const RETURN_POLICIES = [
   {
@@ -78,6 +81,7 @@ export default function ProductDetail() {
   const { id } = useParams()
   const [product, setProduct] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [related, setRelated] = useState([])
   const addItem = useCartStore(s => s.addItem)
   const navigate = useNavigate()
 
@@ -85,6 +89,7 @@ export default function ProductDetail() {
     let isMounted = true
 
     setLoading(true)
+    setRelated([])
     getProduct(id)
       .then(res => {
         if (isMounted) setProduct(res.data)
@@ -93,10 +98,28 @@ export default function ProductDetail() {
         if (isMounted) setLoading(false)
       })
 
-    return () => {
-      isMounted = false
-    }
+    return () => { isMounted = false }
   }, [id])
+
+  // Fetch related products once we have category_id
+  useEffect(() => {
+    if (!product?.category_id) return
+    let isMounted = true
+
+    supabase
+      .from('products')
+      .select('*, categories(name)')
+      .eq('category_id', product.category_id)
+      .eq('is_active', true)
+      .neq('id', product.id)
+      .order('stock', { ascending: false })
+      .limit(8)
+      .then(({ data }) => {
+        if (isMounted) setRelated(data || [])
+      })
+
+    return () => { isMounted = false }
+  }, [product?.category_id, product?.id])
 
   if (loading) {
     return (
@@ -148,8 +171,10 @@ export default function ProductDetail() {
           {product.image_url ? (
             <img
               className="product-detail__image"
-              src={product.image_url}
+              src={imgUrl(product.image_url, { width: 800, quality: 85 })}
               alt={product.name}
+              loading="eager"
+              decoding="async"
             />
           ) : (
             <div className="product-detail__placeholder">📦</div>
@@ -232,6 +257,24 @@ export default function ProductDetail() {
           <ReturnPolicy category={product.categories?.name} />
         </div>
       </div>
+
+      {related.length > 0 ? (
+        <section className="related-section">
+          <h2 className="related-section__title">
+            More from {product.categories?.name || 'this category'}
+          </h2>
+          <div className="product-grid">
+            {related.map(p => (
+              <ProductCard
+                key={p.id}
+                product={p}
+                onSelect={p => navigate(`/product/${p.id}`)}
+                onAdd={addItem}
+              />
+            ))}
+          </div>
+        </section>
+      ) : null}
     </div>
   )
 }
