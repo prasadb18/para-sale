@@ -27,8 +27,8 @@ export default function Dashboard() {
       supabase.from('orders').select('id', { count: 'exact' }).eq('status', 'pending'),
       supabase.from('orders').select('total').gte('created_at', today.toISOString()),
       supabase.from('products').select('id', { count: 'exact' }).eq('is_active', true),
-      supabase.from('orders').select('order_items(quantity, products(price, buying_price))').gte('created_at', today.toISOString()),
-      supabase.from('orders').select('order_items(quantity, products(price, buying_price))')
+      supabase.from('orders').select('order_items(quantity, products(price, buying_price))').eq('status', 'delivered').gte('created_at', today.toISOString()),
+      supabase.from('orders').select('order_items(quantity, products(price, buying_price))').eq('status', 'delivered')
     ])
 
     const todayRevenue = (todayOrders.data || []).reduce((sum, o) => sum + (o.total || 0), 0)
@@ -86,22 +86,23 @@ export default function Dashboard() {
       {/* Stat cards */}
       <div style={styles.statsGrid}>
         {[
-          { label: 'Total Orders', value: stats.totalOrders, icon: '📦' },
-          { label: 'Pending', value: stats.pendingOrders, icon: '⏳', alert: stats.pendingOrders > 0 },
-          { label: "Today's Revenue", value: `₹${stats.todayRevenue.toFixed(0)}`, icon: '💰' },
-          { label: 'Active Products', value: stats.totalProducts, icon: '🏪' },
-          { label: "Today's Profit", value: `₹${stats.todayProfit.toFixed(0)}`, icon: '📈', profit: true },
-          { label: 'Total Profit (All Time)', value: `₹${stats.totalProfit.toFixed(0)}`, icon: '💹', profit: true }
+          { label: 'Total Orders', value: stats.totalOrders, icon: '📦', path: '/admin/orders' },
+          { label: 'Pending', value: stats.pendingOrders, icon: '⏳', alert: stats.pendingOrders > 0, path: '/admin/orders' },
+          { label: "Today's Revenue", value: `₹${stats.todayRevenue.toFixed(0)}`, icon: '💰', path: '/admin/orders' },
+          { label: 'Active Products', value: stats.totalProducts, icon: '🏪', path: '/admin/products' },
+          { label: "Today's Profit (Delivered)", value: `₹${stats.todayProfit.toFixed(0)}`, icon: '📈', profit: true, path: '/admin/orders' },
+          { label: 'Total Profit (Delivered)', value: `₹${stats.totalProfit.toFixed(0)}`, icon: '💹', profit: true, path: '/admin/orders' }
         ].map(stat => (
-          <div key={stat.label} style={{
+          <button key={stat.label} onClick={() => navigate(stat.path)} style={{
             ...styles.statCard,
             borderColor: stat.alert ? '#f39c12' : stat.profit ? '#2e7d32' : '#eee',
-            background: stat.alert ? '#fffbf0' : stat.profit ? '#f1f8f1' : 'white'
+            background: stat.alert ? '#fffbf0' : stat.profit ? '#f1f8f1' : 'white',
+            cursor: 'pointer', textAlign: 'center', fontFamily: 'inherit'
           }}>
             <span style={styles.statIcon}>{stat.icon}</span>
             <p style={{ ...styles.statValue, color: stat.profit ? '#2e7d32' : 'inherit' }}>{stat.value}</p>
             <p style={styles.statLabel}>{stat.label}</p>
-          </div>
+          </button>
         ))}
       </div>
 
