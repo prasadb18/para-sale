@@ -5,6 +5,69 @@ import ProductCard from '../components/ProductCard'
 import { getCategoryMeta } from '../lib/storefront'
 import useCartStore from '../store/cartStore'
 
+const KITS = [
+  {
+    id: 'basic-wiring',
+    icon: '⚡',
+    name: 'Basic Wiring Kit',
+    tagline: 'Everything for a new room wiring job',
+    items: ['Wires & cables', 'Switches & sockets', 'MCB & distribution box'],
+    color: '#e8f1fb',
+    accent: '#1565c0',
+    search: 'wire'
+  },
+  {
+    id: 'bathroom-plumbing',
+    icon: '🚿',
+    name: 'Bathroom Plumbing Kit',
+    tagline: 'Taps, pipes & fittings in one go',
+    items: ['CPVC pipes', 'Ball valves', 'Basin & shower taps'],
+    color: '#e0f5f5',
+    accent: '#00695c',
+    search: 'pipe'
+  },
+  {
+    id: 'painting-starter',
+    icon: '🎨',
+    name: 'Painting Starter Kit',
+    tagline: 'Primer to finish — all you need',
+    items: ['Wall primer', 'Emulsion paint', 'Rollers & brushes'],
+    color: '#fff8e1',
+    accent: '#e65100',
+    search: 'paint'
+  },
+  {
+    id: 'site-tools',
+    icon: '🛠️',
+    name: 'Site Tool Kit',
+    tagline: 'Must-have tools for any construction site',
+    items: ['Measuring tape', 'Drill bits', 'Fasteners & anchors'],
+    color: '#f3e5f5',
+    accent: '#6a1b9a',
+    search: 'drill'
+  },
+  {
+    id: 'lighting-setup',
+    icon: '💡',
+    name: 'Lighting Setup Kit',
+    tagline: 'LED fixtures, drivers & accessories',
+    items: ['LED bulbs', 'Batten lights', 'Downlights & drivers'],
+    color: '#f0fdf4',
+    accent: '#2e7d32',
+    search: 'led'
+  },
+  {
+    id: 'safety-kit',
+    icon: '🔒',
+    name: 'Safety & Protection Kit',
+    tagline: 'MCBs, earthing & protection gear',
+    items: ['MCB breakers', 'Earth leakage protection', 'Electrical tape & conduits'],
+    color: '#fce4ec',
+    accent: '#b71c1c',
+    search: 'mcb'
+  }
+]
+
 export default function Home() {
   const [categories, setCategories] = useState([])
   const [products, setProducts] = useState([])
@@ -178,6 +241,38 @@ export default function Home() {
           </div>
         </section>
       )}
+
+      {/* ── Project Kits ── */}
+      <section className="storefront-section shell">
+        <div className="section-header">
+          <h2 className="section-title">Project Kits</h2>
+          <p className="section-copy">Everything for a job, in one search</p>
+        </div>
+
+        <div className="kit-strip">
+          {KITS.map(kit => (
+            <button
+              key={kit.id}
+              type="button"
+              className="kit-card reveal"
+              style={{ '--kit-bg': kit.color, '--kit-accent': kit.accent }}
+              onClick={() => navigate(`/products?q=${encodeURIComponent(kit.search)}`)}
+            >
+              <span className="kit-card__icon">{kit.icon}</span>
+              <div className="kit-card__body">
+                <p className="kit-card__name">{kit.name}</p>
+                <p className="kit-card__tagline">{kit.tagline}</p>
+                <ul className="kit-card__items">
+                  {kit.items.map(item => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              </div>
+              <span className="kit-card__cta">Explore →</span>
+            </button>
+          ))}
+        </div>
+      </section>
     </div>
   )
 }
