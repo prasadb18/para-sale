@@ -5,7 +5,8 @@ import { supabase } from '../../lib/supabase'
 export default function Dashboard() {
   const [stats, setStats] = useState({
     totalOrders: 0, pendingOrders: 0,
-    todayRevenue: 0, totalProducts: 0
+    todayRevenue: 0, totalProducts: 0,
+    todayProfit: 0, totalProfit: 0
   })
   const [recentOrders, setRecentOrders] = useState([])
   const [lowStock, setLowStock] = useState([])
@@ -21,20 +22,33 @@ export default function Dashboard() {
     const today = new Date()
     today.setHours(0, 0, 0, 0)
 
-    const [orders, pending, todayOrders, products] = await Promise.all([
+    const [orders, pending, todayOrders, products, todayOrderItems, allOrderItems] = await Promise.all([
       supabase.from('orders').select('id', { count: 'exact' }),
       supabase.from('orders').select('id', { count: 'exact' }).eq('status', 'pending'),
       supabase.from('orders').select('total').gte('created_at', today.toISOString()),
-      supabase.from('products').select('id', { count: 'exact' }).eq('is_active', true)
+      supabase.from('products').select('id', { count: 'exact' }).eq('is_active', true),
+      supabase.from('orders').select('order_items(quantity, products(price, buying_price))').gte('created_at', today.toISOString()),
+      supabase.from('orders').select('order_items(quantity, products(price, buying_price))')
     ])
 
     const todayRevenue = (todayOrders.data || []).reduce((sum, o) => sum + (o.total || 0), 0)
+
+    const calcProfit = (ordersData) =>
+      (ordersData || []).reduce((sum, order) =>
+        sum + (order.order_items || []).reduce((s, item) => {
+          const p = item.products
+          if (!p?.buying_price) return s
+          return s + (p.price - p.buying_price) * (item.quantity || 1)
+        }, 0)
+      , 0)
 
     setStats({
       totalOrders: orders.count || 0,
       pendingOrders: pending.count || 0,
       todayRevenue,
-      totalProducts: products.count || 0
+      totalProducts: products.count || 0,
+      todayProfit: calcProfit(todayOrderItems.data),
+      totalProfit: calcProfit(allOrderItems.data)
     })
   }
 
@@ -75,15 +89,17 @@ export default function Dashboard() {
           { label: 'Total Orders', value: stats.totalOrders, icon: '📦' },
           { label: 'Pending', value: stats.pendingOrders, icon: '⏳', alert: stats.pendingOrders > 0 },
           { label: "Today's Revenue", value: `₹${stats.todayRevenue.toFixed(0)}`, icon: '💰' },
-          { label: 'Active Products', value: stats.totalProducts, icon: '🏪' }
+          { label: 'Active Products', value: stats.totalProducts, icon: '🏪' },
+          { label: "Today's Profit", value: `₹${stats.todayProfit.toFixed(0)}`, icon: '📈', profit: true },
+          { label: 'Total Profit (All Time)', value: `₹${stats.totalProfit.toFixed(0)}`, icon: '💹', profit: true }
         ].map(stat => (
           <div key={stat.label} style={{
             ...styles.statCard,
-            borderColor: stat.alert ? '#f39c12' : '#eee',
-            background: stat.alert ? '#fffbf0' : 'white'
+            borderColor: stat.alert ? '#f39c12' : stat.profit ? '#2e7d32' : '#eee',
+            background: stat.alert ? '#fffbf0' : stat.profit ? '#f1f8f1' : 'white'
           }}>
             <span style={styles.statIcon}>{stat.icon}</span>
-            <p style={styles.statValue}>{stat.value}</p>
+            <p style={{ ...styles.statValue, color: stat.profit ? '#2e7d32' : 'inherit' }}>{stat.value}</p>
             <p style={styles.statLabel}>{stat.label}</p>
           </div>
         ))}
@@ -170,7 +186,8 @@ const styles = {
   page: { padding: '20px', maxWidth: '680px', margin: '0 auto' },
   heading: { fontSize: '22px', margin: '0 0 20px' },
   statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)',
-    gap: '12px', marginBottom: '24px' },
+    gap: '12px', marginBottom: '24px',
+    '@media (min-width: 600px)': { gridTemplateColumns: 'repeat(3, 1fr)' } },
   statCard: { border: '2px solid #eee', borderRadius: '12px',
     padding: '16px', textAlign: 'center', background: 'white' },
   statIcon: { fontSize: '28px' },

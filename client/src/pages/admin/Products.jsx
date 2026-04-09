@@ -6,13 +6,13 @@ import { imgUrl } from '../../lib/imgUrl'
 
 const UNITS = ['piece', 'metre', 'kg', 'litre', 'box', 'roll', 'bag']
 
-const CSV_HEADERS = ['name', 'description', 'brand', 'spec', 'price', 'mrp', 'stock', 'unit', 'category_name', 'image_url', 'is_active']
+const CSV_HEADERS = ['name', 'description', 'brand', 'spec', 'buying_price', 'price', 'mrp', 'stock', 'unit', 'category_name', 'image_url', 'is_active']
 
 function downloadTemplate() {
   const sample = [
     CSV_HEADERS.join(','),
-    '"Example Drill Bit Set","10-piece HSS drill bit set","Bosch","10-piece HSS","499","599","50","piece","Tools","","true"',
-    '"PVC Pipe 1 inch","1 metre rigid PVC pipe","Finolex","1 inch dia","35","40","200","metre","Plumbing","","true"'
+    '"Example Drill Bit Set","10-piece HSS drill bit set","Bosch","10-piece HSS","420","499","599","50","piece","Tools","","true"',
+    '"PVC Pipe 1 inch","1 metre rigid PVC pipe","Finolex","1 inch dia","28","35","40","200","metre","Plumbing","","true"'
   ].join('\n')
   const blob = new Blob([sample], { type: 'text/csv' })
   const url = URL.createObjectURL(blob)
@@ -81,6 +81,7 @@ export default function AdminProducts() {
       name: product.name,
       description: product.description || '',
       spec: product.spec || '',
+      buying_price: product.buying_price || '',
       price: product.price,
       mrp: product.mrp || '',
       stock: product.stock,
@@ -95,6 +96,7 @@ export default function AdminProducts() {
   const saveEdit = async (id) => {
     await supabase.from('products').update({
       ...form,
+      buying_price: form.buying_price ? parseFloat(form.buying_price) : null,
       price: parseFloat(form.price),
       mrp: form.mrp ? parseFloat(form.mrp) : null,
       stock: parseInt(form.stock, 10)
@@ -156,6 +158,7 @@ export default function AdminProducts() {
           description: row.description || '',
           brand: row.brand || '',
           spec: row.spec || '',
+          buying_price: row.buying_price ? parseFloat(row.buying_price) : null,
           price: parseFloat(row.price) || 0,
           mrp: row.mrp ? parseFloat(row.mrp) : null,
           stock: parseInt(row.stock) || 0,
@@ -266,7 +269,8 @@ export default function AdminProducts() {
                           { label: 'Name', key: 'name', type: 'text' },
                           { label: 'Brand', key: 'brand', type: 'text' },
                           { label: 'Spec', key: 'spec', type: 'text' },
-                          { label: 'Price (₹)', key: 'price', type: 'number' },
+                          { label: 'Buying Price (₹)', key: 'buying_price', type: 'number' },
+                          { label: 'Selling Price (₹)', key: 'price', type: 'number' },
                           { label: 'MRP (₹)', key: 'mrp', type: 'number' },
                           { label: 'Stock', key: 'stock', type: 'number' },
                         ].map(({ label, key, type }) => (
@@ -314,7 +318,15 @@ export default function AdminProducts() {
                           {product.categories?.name || '—'} · {product.brand || 'No brand'} · {product.unit}
                         </p>
                         <div className="admin-product-badges">
-                          <span className="admin-badge">₹{product.price}</span>
+                          {product.buying_price ? (
+                            <span className="admin-badge admin-badge--muted">Cost ₹{product.buying_price}</span>
+                          ) : null}
+                          <span className="admin-badge">Sell ₹{product.price}</span>
+                          {product.buying_price ? (
+                            <span className="admin-badge admin-badge--profit">
+                              +₹{(product.price - product.buying_price).toFixed(0)} profit
+                            </span>
+                          ) : null}
                           {product.mrp && (
                             <span className="admin-badge admin-badge--muted">MRP ₹{product.mrp}</span>
                           )}

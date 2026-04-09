@@ -11,7 +11,7 @@ export default function NewProduct() {
   const [loading, setLoading] = useState(false)
   const [form, setForm] = useState({
     name: '', description: '', brand: '', spec: '',
-    price: '', mrp: '', stock: '', unit: 'piece',
+    price: '', mrp: '', buying_price: '', stock: '', unit: 'piece',
     category_id: '', image_url: '', is_active: true
   })
 
@@ -32,6 +32,7 @@ export default function NewProduct() {
       ...form,
       price: parseFloat(form.price),
       mrp: form.mrp ? parseFloat(form.mrp) : null,
+      buying_price: form.buying_price ? parseFloat(form.buying_price) : null,
       stock: parseInt(form.stock)
     })
     setLoading(false)
@@ -100,13 +101,24 @@ export default function NewProduct() {
 
             <div className="admin-form-row">
               <div className="field">
-                <span>Selling Price (₹) <span style={{ color: '#e53935' }}>*</span></span>
-                <input className="input" type="number" placeholder="0.00" value={form.price} onChange={set('price')} />
+                <span>Buying Price (₹) <span style={{ color: 'var(--text-soft)', fontWeight: 400, fontSize: '0.8rem' }}>(your cost)</span></span>
+                <input className="input" type="number" placeholder="0.00" value={form.buying_price} onChange={set('buying_price')} />
               </div>
               <div className="field">
-                <span>MRP (₹)</span>
+                <span>MRP (₹) <span style={{ color: 'var(--text-soft)', fontWeight: 400, fontSize: '0.8rem' }}>(printed on pack)</span></span>
                 <input className="input" type="number" placeholder="0.00" value={form.mrp} onChange={set('mrp')} />
               </div>
+            </div>
+
+            <div className="field" style={{ marginTop: 12 }}>
+              <span>Selling Price (₹) <span style={{ color: '#e53935' }}>*</span></span>
+              <input className="input" type="number" placeholder="0.00" value={form.price} onChange={set('price')} />
+              {form.buying_price && form.price && parseFloat(form.price) > parseFloat(form.buying_price) ? (
+                <p style={{ marginTop: 4, fontSize: '0.8rem', color: '#2e7d32', fontWeight: 600 }}>
+                  Profit per unit: ₹{(parseFloat(form.price) - parseFloat(form.buying_price)).toFixed(2)}
+                  {' '}({Math.round(((parseFloat(form.price) - parseFloat(form.buying_price)) / parseFloat(form.buying_price)) * 100)}% margin)
+                </p>
+              ) : null}
             </div>
 
             <div className="admin-form-row" style={{ marginTop: 12 }}>

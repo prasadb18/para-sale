@@ -3536,6 +3536,13 @@
   border-color: #ffcdd2;
 }
 
+.admin-badge--profit {
+  background: #e8f5e9;
+  color: #1b5e20;
+  border-color: #a5d6a7;
+  font-weight: 700;
+}
+
 .admin-product-actions {
   display: flex;
   gap: 6px;
