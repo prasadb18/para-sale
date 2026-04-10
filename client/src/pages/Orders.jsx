@@ -7,6 +7,16 @@ import useCartStore from '../store/cartStore'
 
 const orderStatuses = ['pending', 'confirmed', 'dispatched', 'delivered', 'cancelled']
 
+const SVC_ICON  = { electrical: '⚡', plumbing: '🔧', painting: '🎨' }
+const SVC_LABEL = { electrical: 'Electrician', plumbing: 'Plumber', painting: 'Painter' }
+const SVC_STATUS = {
+  pending:   { bg: '#fff8e1', color: '#f39c12' },
+  confirmed: { bg: '#e3f2fd', color: '#1565c0' },
+  assigned:  { bg: '#e8f5e9', color: '#2e7d32' },
+  completed: { bg: '#f3e5f5', color: '#6a1b9a' },
+  cancelled: { bg: '#fce4ec', color: '#c62828' }
+}
+
 const statusSteps = ['pending', 'confirmed', 'dispatched', 'delivered']
 
 const getStatusBar = (current) => {
@@ -82,7 +92,8 @@ export default function Orders() {
         .select(`
           *,
           addresses(label, line1, city),
-          order_items(quantity, price_at_order, product_id, products(id, name, image_url, price))
+          order_items(quantity, price_at_order, product_id, products(id, name, image_url, price)),
+          service_bookings(id, service_type, scheduled_date, time_slot, visiting_charge, extra_charges, status, technicians(name, phone))
         `)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false })
@@ -91,7 +102,7 @@ export default function Orders() {
         // Fallback: fetch without nested product join (RLS might block it)
         const { data: fallback, error: fallbackError } = await supabase
           .from('orders')
-          .select(`*, addresses(label, line1, city), order_items(quantity, price_at_order, product_id)`)
+          .select(`*, addresses(label, line1, city), order_items(quantity, price_at_order, product_id), service_bookings(id, service_type, scheduled_date, time_slot, visiting_charge, extra_charges, status)`)
           .eq('user_id', user.id)
           .order('created_at', { ascending: false })
         if (fallbackError) throw fallbackError
@@ -224,6 +235,24 @@ export default function Orders() {
                     <span>{formatCurrency(item.price_at_order * item.quantity)}</span>
                   </div>
                 ))}
+                {(order.service_bookings || []).map(b => {
+                  const s = SVC_STATUS[b.status] || SVC_STATUS.pending
+                  return (
+                    <div key={b.id} className="line-item line-item--service">
+                      <span>
+                        <strong>{SVC_ICON[b.service_type]} {SVC_LABEL[b.service_type]}</strong>
+                        <span className="line-item__service-meta">
+                          {b.scheduled_date} · {b.time_slot}
+                          {b.technicians ? ` · 👷 ${b.technicians.name}` : ''}
+                        </span>
+                      </span>
+                      <span style={{ padding: '2px 8px', borderRadius: 12, fontSize: '0.75rem', fontWeight: 700, background: s.bg, color: s.color }}>
+                        {b.status}
+                      </span>
+                      <span>{formatCurrency((b.visiting_charge || 200) + (b.extra_charges || 0))}</span>
+                    </div>
+                  )
+                })}
               </div>
 
               <div className="order-history__footer">

@@ -322,6 +322,13 @@ export default function Checkout() {
       await supabase.rpc('decrement_stock', { product_id: item.id, qty: item.qty })
     }
 
+    // Link service bookings to this order
+    if (serviceBookings.length > 0) {
+      await Promise.all(serviceBookings.map(b =>
+        supabase.from('service_bookings').update({ order_id: order.id }).eq('id', b.id)
+      ))
+    }
+
     trackPurchase({ orderId: order.id, total: grandTotal, deliveryCharge, items })
     clearCart()
     clearServiceBookings()

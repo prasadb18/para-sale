@@ -2401,6 +2401,21 @@
   color: var(--text);
 }
 
+.line-item--service {
+  background: #f0fdf4;
+  border: 1px solid #c8e6c9;
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-top: 4px;
+}
+
+.line-item__service-meta {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--text-soft);
+  margin-top: 2px;
+}
+
 /* ============================================================
    SUCCESS / EMPTY / LOADING STATES
    ============================================================ */
