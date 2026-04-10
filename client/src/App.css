@@ -1821,6 +1821,39 @@
   align-items: start;
 }
 
+/* ── Cart service upsell ── */
+.cart-services {
+  grid-column: 1 / -1;
+  background: #f8fafb;
+  border: 1.5px solid #e0e7ef;
+  border-radius: 14px;
+  padding: 18px 20px;
+}
+.cart-services__heading { margin: 0 0 4px; font-weight: 800; font-size: 1rem; }
+.cart-services__sub     { margin: 0 0 14px; font-size: 0.85rem; color: var(--text-soft); }
+.cart-services__cards   { display: flex; flex-direction: column; gap: 10px; }
+
+.cart-service-card {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: var(--svc-bg);
+  border: 1.5px solid transparent;
+  border-radius: 12px;
+  padding: 14px 16px;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s, transform 0.15s;
+  width: 100%;
+}
+.cart-service-card:hover { border-color: var(--svc-accent); transform: translateX(2px); }
+.cart-service-card__icon  { font-size: 28px; flex-shrink: 0; }
+.cart-service-card__body  { flex: 1; }
+.cart-service-card__label { margin: 0; font-weight: 700; font-size: 0.95rem; color: var(--svc-accent); }
+.cart-service-card__desc  { margin: 2px 0 0; font-size: 0.8rem; color: #555; }
+.cart-service-card__price { margin: 4px 0 0; font-size: 0.8rem; font-weight: 600; color: #2e7d32; }
+.cart-service-card__arrow { font-size: 1.2rem; color: var(--svc-accent); font-weight: 700; flex-shrink: 0; }
+
 .cart-list {
   display: grid;
   gap: 12px;

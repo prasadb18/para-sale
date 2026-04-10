@@ -2,10 +2,30 @@ import { useNavigate } from 'react-router-dom'
 import { formatCurrency } from '../lib/storefront'
 import useCartStore from '../store/cartStore'
 
+const SERVICE_MATCH = [
+  { match: /electric|wire|cable|switch|socket|mcb|breaker|light|led|fan/i, type: 'electrical', icon: '⚡', label: 'Electrician', color: '#e8f1fb', accent: '#1565c0' },
+  { match: /pipe|tap|fitting|plumb|sanit|basin|toilet|valve/i,             type: 'plumbing',   icon: '🔧', label: 'Plumber',      color: '#e0f5f5', accent: '#00695c' },
+  { match: /paint|primer|putty|varnish|enamel|wood finish/i,               type: 'painting',   icon: '🎨', label: 'Painter',      color: '#fff8e1', accent: '#e65100' }
+]
+
+function detectNeededServices(items) {
+  const found = []
+  for (const svc of SERVICE_MATCH) {
+    const relevant = items.filter(item =>
+      svc.match.test(item.name) || svc.match.test(item.categories?.name || '')
+    )
+    if (relevant.length > 0 && !found.find(f => f.type === svc.type)) {
+      found.push({ ...svc, products: relevant.map(p => p.name) })
+    }
+  }
+  return found
+}
+
 export default function Cart() {
   const { items, updateQty, removeItem, total } = useCartStore()
   const navigate = useNavigate()
   const itemCount = items.reduce((sum, item) => sum + item.qty, 0)
+  const neededServices = detectNeededServices(items)
   const deliveryCharge = total >= 500 ? 0 : 50
   const grandTotal = total + deliveryCharge
 
@@ -92,6 +112,34 @@ export default function Cart() {
             </article>
           ))}
         </section>
+
+        {neededServices.length > 0 && (
+          <section className="cart-services">
+            <p className="cart-services__heading">🛠️ Need installation help?</p>
+            <p className="cart-services__sub">Based on your cart, you might need a technician.</p>
+            <div className="cart-services__cards">
+              {neededServices.map(svc => (
+                <button
+                  key={svc.type}
+                  type="button"
+                  className="cart-service-card"
+                  style={{ '--svc-bg': svc.color, '--svc-accent': svc.accent }}
+                  onClick={() => navigate(`/services?type=${svc.type}`)}
+                >
+                  <span className="cart-service-card__icon">{svc.icon}</span>
+                  <div className="cart-service-card__body">
+                    <p className="cart-service-card__label">Book a {svc.label}</p>
+                    <p className="cart-service-card__desc">
+                      For: {svc.products.slice(0, 2).join(', ')}{svc.products.length > 2 ? ` +${svc.products.length - 2} more` : ''}
+                    </p>
+                    <p className="cart-service-card__price">₹200 visiting charge</p>
+                  </div>
+                  <span className="cart-service-card__arrow">→</span>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
 
         <aside className="order-card">
           <p className="eyebrow">Summary</p>
