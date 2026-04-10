@@ -1854,6 +1854,24 @@
 .cart-service-card__price { margin: 4px 0 0; font-size: 0.8rem; font-weight: 600; color: #2e7d32; }
 .cart-service-card__arrow { font-size: 1.2rem; color: var(--svc-accent); font-weight: 700; flex-shrink: 0; }
 
+/* Per-item inline service button */
+.cart-row__service-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 7px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  border: 1.5px solid var(--svc-accent);
+  background: transparent;
+  color: var(--svc-accent);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.cart-row__service-btn:hover { background: color-mix(in srgb, var(--svc-accent) 10%, transparent); }
+
 .cart-list {
   display: grid;
   gap: 12px;
