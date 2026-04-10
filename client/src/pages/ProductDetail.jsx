@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, Link } from 'react-router-dom'
 import { getProduct } from '../api'
 import { formatCurrency, getDiscountPercent } from '../lib/storefront'
 import useCartStore from '../store/cartStore'
@@ -74,6 +74,27 @@ function ReturnPolicy({ category }) {
         ))}
       </ul>
     </div>
+  )
+}
+
+const SERVICE_MAP = [
+  { match: /electric|wire|cable|switch|socket|mcb|breaker|light|led|fan|fitting/i, type: 'electrical', icon: '⚡', label: 'Need an Electrician?', desc: 'We can install, wire or fit this product for you.' },
+  { match: /pipe|tap|fitting|plumb|sanit|basin|toilet|valve/i,                    type: 'plumbing',   icon: '🔧', label: 'Need a Plumber?',     desc: 'We can fit, connect or repair plumbing for you.' },
+  { match: /paint|primer|putty|varnish|enamel|wood finish/i,                      type: 'painting',   icon: '🎨', label: 'Need a Painter?',    desc: 'We can apply this product professionally for you.' }
+]
+
+function ServiceCombo({ categoryName }) {
+  const cat = categoryName || ''
+  const svc = SERVICE_MAP.find(s => s.match.test(cat))
+  if (!svc) return null
+  return (
+    <Link to={`/services?type=${svc.type}`} className="service-combo-cta">
+      <span className="service-combo-cta__icon">{svc.icon}</span>
+      <div>
+        <p className="service-combo-cta__title">{svc.label}</p>
+        <p className="service-combo-cta__desc">{svc.desc} Book a technician →</p>
+      </div>
+    </Link>
   )
 }
 
@@ -255,6 +276,8 @@ export default function ProductDetail() {
           </div>
 
           <ReturnPolicy category={product.categories?.name} />
+
+          <ServiceCombo categoryName={product.categories?.name} />
         </div>
       </div>
 

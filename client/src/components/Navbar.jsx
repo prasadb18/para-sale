@@ -132,6 +132,13 @@ export default function Navbar() {
                     >
                       My Orders
                     </Link>
+                    <Link
+                      to="/my-bookings"
+                      className="account-dropdown__item"
+                      onClick={() => setAccountOpen(false)}
+                    >
+                      My Bookings
+                    </Link>
                     <button
                       type="button"
                       className="account-dropdown__item account-dropdown__item--danger"

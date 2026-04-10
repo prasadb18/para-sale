@@ -15,6 +15,10 @@ import AdminOrders from './pages/admin/Orders'
 import AdminProducts from './pages/admin/Products'
 import NewProduct from './pages/admin/NewProduct'
 import AdminCategories from './pages/admin/Categories'
+import AdminBookings from './pages/admin/Bookings'
+import Technicians from './pages/admin/Technicians'
+import Services from './pages/Services'
+import MyBookings from './pages/MyBookings'
 import Navbar from './components/Navbar'
 import CartNotice from './components/CartNotice'
 import InstallBanner from './components/InstallBanner'
@@ -82,11 +86,16 @@ export default function App() {
       <Route path="/checkout" element={<StorefrontPage><Checkout /></StorefrontPage>} />
       <Route path="/orders" element={<StorefrontPage><ProtectedRoute><Orders /></ProtectedRoute></StorefrontPage>} />
 
+      <Route path="/services" element={<StorefrontPage><Services /></StorefrontPage>} />
+      <Route path="/my-bookings" element={<StorefrontPage><ProtectedRoute><MyBookings /></ProtectedRoute></StorefrontPage>} />
+
       <Route path="/admin" element={<Admin><Dashboard /></Admin>} />
       <Route path="/admin/orders" element={<Admin><AdminOrders /></Admin>} />
       <Route path="/admin/products" element={<Admin><AdminProducts /></Admin>} />
       <Route path="/admin/products/new" element={<Admin><NewProduct /></Admin>} />
       <Route path="/admin/categories" element={<Admin><AdminCategories /></Admin>} />
+      <Route path="/admin/bookings" element={<Admin><AdminBookings /></Admin>} />
+      <Route path="/admin/technicians" element={<Admin><Technicians /></Admin>} />
     </Routes>
   )
 }

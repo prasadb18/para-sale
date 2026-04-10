@@ -7,7 +7,9 @@ export default function AdminLayout({ children }) {
     { path: '/admin', label: '📊 Dashboard' },
     { path: '/admin/orders', label: '📋 Orders' },
     { path: '/admin/products', label: '📦 Products' },
-    { path: '/admin/categories', label: '🗂️ Categories' }
+    { path: '/admin/categories', label: '🗂️ Categories' },
+    { path: '/admin/bookings', label: '🛠️ Bookings' },
+    { path: '/admin/technicians', label: '👷 Technicians' }
   ]
 
   return (

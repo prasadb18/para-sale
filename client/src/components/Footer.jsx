@@ -30,6 +30,7 @@ export default function Footer() {
               <Link to="/products">All Products</Link>
               <Link to="/products?filter=instock">In Stock</Link>
               <Link to="/products?filter=offer">On Offer</Link>
+              <Link to="/services">Book a Technician</Link>
               <Link to="/cart">Cart</Link>
               <Link to="/orders">My Orders</Link>
             </nav>

@@ -1646,6 +1646,138 @@
   margin: 0 0 18px;
 }
 
+/* ── Service Combo CTA (ProductDetail) ── */
+.service-combo-cta {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 16px;
+  padding: 14px 16px;
+  background: #f0fdf4;
+  border: 1.5px solid #a5d6a7;
+  border-radius: 12px;
+  text-decoration: none;
+  color: inherit;
+  transition: background 0.15s;
+}
+.service-combo-cta:hover { background: #e8f5e9; }
+.service-combo-cta__icon { font-size: 28px; flex-shrink: 0; }
+.service-combo-cta__title { margin: 0; font-weight: 700; font-size: 0.95rem; color: #1b5e20; }
+.service-combo-cta__desc  { margin: 2px 0 0; font-size: 0.82rem; color: #2e7d32; }
+
+/* ── Services page ── */
+.service-hero {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(135deg, #1a1a2e 0%, #2d2d4e 100%);
+  border-radius: 16px;
+  padding: 32px 28px;
+  color: white;
+  gap: 20px;
+}
+.service-hero__title { margin: 0 0 8px; font-size: 1.8rem; font-weight: 800; }
+.service-hero__sub   { margin: 0 0 12px; opacity: 0.85; font-size: 1rem; }
+.service-hero__pill  {
+  display: inline-block;
+  background: rgba(255,255,255,0.15);
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.service-type-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+}
+.service-type-card {
+  background: var(--svc-bg);
+  border: 2px solid transparent;
+  border-radius: 14px;
+  padding: 20px;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.15s;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: relative;
+}
+.service-type-card:hover { transform: translateY(-2px); border-color: var(--svc-accent); }
+.service-type-card--active { border-color: var(--svc-accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--svc-accent) 20%, transparent); }
+.service-type-card__icon  { font-size: 36px; }
+.service-type-card__label { margin: 0; font-size: 1.1rem; font-weight: 800; color: var(--svc-accent); }
+.service-type-card__desc  { margin: 0; font-size: 0.85rem; color: #555; }
+.service-type-card__examples { margin: 4px 0 0; padding-left: 16px; font-size: 0.82rem; color: #666; }
+.service-type-card__examples li { margin-bottom: 2px; }
+.service-type-card__check {
+  position: absolute; top: 12px; right: 14px;
+  background: var(--svc-accent); color: white;
+  padding: 3px 10px; border-radius: 20px; font-size: 0.78rem; font-weight: 700;
+}
+
+.service-booking-form {
+  background: white;
+  border: 1px solid #eee;
+  border-radius: 16px;
+  padding: 24px;
+  max-width: 720px;
+}
+
+.service-pricing-note {
+  background: #f0fdf4;
+  border: 1px solid #a5d6a7;
+  border-radius: 10px;
+  padding: 12px 16px;
+  font-size: 0.85rem;
+  color: #2e7d32;
+  margin-top: 14px;
+}
+
+/* ── Service done confirmation ── */
+.service-done {
+  text-align: center;
+  padding: 40px 20px;
+  max-width: 520px;
+  margin: 0 auto;
+}
+.service-done__icon  { font-size: 52px; display: block; margin-bottom: 16px; }
+.service-done__title { font-size: 1.6rem; font-weight: 800; margin: 0 0 8px; }
+.service-done__sub   { font-size: 1rem; color: #555; margin: 0 0 20px; }
+.service-done__summary {
+  background: #f8fafb;
+  border: 1px solid #eee;
+  border-radius: 12px;
+  padding: 16px 20px;
+  text-align: left;
+  font-size: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.service-done__summary p { margin: 0; }
+
+/* ── My Bookings ── */
+.my-booking-card {
+  border: 1px solid #eee;
+  border-radius: 14px;
+  overflow: hidden;
+  background: white;
+}
+.my-booking-card__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  border-bottom: 1px solid #f5f5f5;
+}
+.my-booking-card__body {
+  padding: 12px 16px;
+  font-size: 0.88rem;
+}
+
 .return-policy {
   margin-top: 20px;
   padding: 14px 16px;
