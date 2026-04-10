@@ -184,10 +184,6 @@ export default function Orders() {
         <div>
           <p className="eyebrow">Order history</p>
           <h1 className="section-title">My orders</h1>
-          <p className="section-copy">
-            Status, address, payment state, and line items are now easier to
-            scan in the 1ShopStore customer flow.
-          </p>
         </div>
       </div>
 
@@ -240,10 +236,12 @@ export default function Orders() {
                   return (
                     <div key={b.id} className="line-item line-item--service">
                       <span>
-                        <strong>{SVC_ICON[b.service_type]} {SVC_LABEL[b.service_type]}</strong>
+                        <strong>
+                          {SVC_ICON[b.service_type]} {SVC_LABEL[b.service_type]} (Service)
+                        </strong>
                         <span className="line-item__service-meta">
-                          {b.scheduled_date} · {b.time_slot}
-                          {b.technicians ? ` · 👷 ${b.technicians.name}` : ''}
+                          📅 {b.scheduled_date} · {b.time_slot}
+                          {b.technicians?.name ? ` · 👷 ${b.technicians.name} (${b.technicians.phone})` : ' · Technician will be assigned'}
                         </span>
                       </span>
                       <span style={{ padding: '2px 8px', borderRadius: 12, fontSize: '0.75rem', fontWeight: 700, background: s.bg, color: s.color }}>
