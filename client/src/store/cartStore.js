@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { trackAddToCart } from '../lib/analytics'
 
 const LOCAL_STORAGE_CART_KEY = '1shopstore_cart'
+const LOCAL_STORAGE_SVC_KEY  = '1shopstore_services'
 
 const loadCartFromStorage = () => {
   try {
@@ -19,6 +20,27 @@ const saveCartToStorage = (items) => {
   try {
     if (typeof window === 'undefined') return
     localStorage.setItem(LOCAL_STORAGE_CART_KEY, JSON.stringify(items))
+  } catch {
+    // no-op
+  }
+}
+
+const loadServicesFromStorage = () => {
+  try {
+    if (typeof window === 'undefined') return []
+    const saved = localStorage.getItem(LOCAL_STORAGE_SVC_KEY)
+    if (!saved) return []
+    const parsed = JSON.parse(saved)
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+const saveServicesToStorage = (svcs) => {
+  try {
+    if (typeof window === 'undefined') return
+    localStorage.setItem(LOCAL_STORAGE_SVC_KEY, JSON.stringify(svcs))
   } catch {
     // no-op
   }
@@ -48,6 +70,7 @@ const buildAddNotice = (product, items) => {
 
 const useCartStore = create((set) => ({
   ...buildCartState(loadCartFromStorage()),
+  serviceBookings: loadServicesFromStorage(),
   notice: null,
 
   addItem: (product) =>
@@ -147,7 +170,30 @@ const useCartStore = create((set) => ({
       }
     }),
 
-  clearNotice: () => set({ notice: null })
+  clearNotice: () => set({ notice: null }),
+
+  addServiceBooking: (booking) =>
+    set((state) => {
+      // Replace if same service_type already booked, else append
+      const exists = state.serviceBookings.find(b => b.service_type === booking.service_type)
+      const next = exists
+        ? state.serviceBookings.map(b => b.service_type === booking.service_type ? booking : b)
+        : [...state.serviceBookings, booking]
+      saveServicesToStorage(next)
+      return { serviceBookings: next }
+    }),
+
+  removeServiceBooking: (service_type) =>
+    set((state) => {
+      const next = state.serviceBookings.filter(b => b.service_type !== service_type)
+      saveServicesToStorage(next)
+      return { serviceBookings: next }
+    }),
+
+  clearServiceBookings: () => {
+    saveServicesToStorage([])
+    set({ serviceBookings: [] })
+  }
 }))
 
 export default useCartStore

@@ -1854,6 +1854,70 @@
 .cart-service-card__price { margin: 4px 0 0; font-size: 0.8rem; font-weight: 600; color: #2e7d32; }
 .cart-service-card__arrow { font-size: 1.2rem; color: var(--svc-accent); font-weight: 700; flex-shrink: 0; }
 
+/* ── Cart service summary in order-card ── */
+.cart-service-summary {
+  margin: 10px 0;
+  padding: 10px 12px;
+  background: #f0fdf4;
+  border: 1px solid #a5d6a7;
+  border-radius: 10px;
+}
+.cart-service-summary__heading {
+  margin: 0 0 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #2e7d32;
+}
+.cart-service-summary__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 5px 0;
+  border-top: 1px solid #c8e6c9;
+  font-size: 0.82rem;
+}
+.cart-service-summary__info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.cart-service-summary__meta {
+  font-size: 0.76rem;
+  color: var(--text-soft);
+}
+.cart-service-summary__right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  color: #1b5e20;
+}
+.cart-service-summary__remove {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #999;
+  font-size: 0.8rem;
+  padding: 0 2px;
+  line-height: 1;
+}
+.cart-service-summary__remove:hover { color: #e53935; }
+
+/* ── Checkout service lines ── */
+.checkout-service-lines {
+  margin: 8px 0;
+  padding: 8px 12px;
+  background: #f0fdf4;
+  border: 1px solid #a5d6a7;
+  border-radius: 8px;
+}
+.checkout-service-lines__heading {
+  margin: 0 0 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #2e7d32;
+}
+
 /* Per-item inline service button */
 .cart-row__service-btn {
   display: inline-flex;

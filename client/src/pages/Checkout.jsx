@@ -59,7 +59,7 @@ function validateGuestInfo(info) {
 }
 
 export default function Checkout() {
-  const { items, total, clearCart } = useCartStore()
+  const { items, total, clearCart, serviceBookings, clearServiceBookings } = useCartStore()
   const { user } = useAuthStore()
   const navigate = useNavigate()
 
@@ -92,7 +92,8 @@ export default function Checkout() {
   const deliveryCity = isGuest ? guestInfo.city : selectedAddress?.city
   const deliveryCharge = total < 500 ? 50 : 0
   const couponDiscount = coupon?.discount || 0
-  const grandTotal = total + deliveryCharge - couponDiscount
+  const serviceTotal = serviceBookings.reduce((sum, b) => sum + (b.visiting_charge || 200) + (b.extra_charges || 0), 0)
+  const grandTotal = total + deliveryCharge - couponDiscount + serviceTotal
   const freeDeliveryGap = Math.max(500 - total, 0)
   const itemCount = items.reduce((sum, item) => sum + item.qty, 0)
   const deliveryEta = getEtaByLocation(deliveryCity)
@@ -323,6 +324,7 @@ export default function Checkout() {
 
     trackPurchase({ orderId: order.id, total: grandTotal, deliveryCharge, items })
     clearCart()
+    clearServiceBookings()
     setOrderId(order.id)
     setStep('success')
   }
@@ -838,6 +840,18 @@ export default function Checkout() {
               </div>
             ) : null}
 
+            {serviceBookings.length > 0 && (
+              <div className="checkout-service-lines">
+                <p className="checkout-service-lines__heading">🛠️ Technician Services</p>
+                {serviceBookings.map(b => (
+                  <div key={b.service_type} className="order-line">
+                    <span style={{ textTransform: 'capitalize' }}>{b.service_type} · {b.scheduled_date}</span>
+                    <span>{formatCurrency((b.visiting_charge || 200) + (b.extra_charges || 0))}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
             <div className="order-total">
               <span>Total</span>
               <strong>{formatCurrency(grandTotal)}</strong>
@@ -967,6 +981,18 @@ export default function Checkout() {
                 <span className="coupon-discount">−{formatCurrency(couponDiscount)}</span>
               </div>
             ) : null}
+
+            {serviceBookings.length > 0 && (
+              <div className="checkout-service-lines">
+                <p className="checkout-service-lines__heading">🛠️ Technician Services</p>
+                {serviceBookings.map(b => (
+                  <div key={b.service_type} className="bill-row">
+                    <span style={{ textTransform: 'capitalize' }}>{b.service_type} · {b.scheduled_date}</span>
+                    <span>{formatCurrency((b.visiting_charge || 200) + (b.extra_charges || 0))}</span>
+                  </div>
+                ))}
+              </div>
+            )}
 
             <div className="bill-total">
               <span>Total</span>

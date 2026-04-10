@@ -10,11 +10,12 @@ const SERVICE_MATCH = [
 
 
 export default function Cart() {
-  const { items, updateQty, removeItem, total } = useCartStore()
+  const { items, updateQty, removeItem, total, serviceBookings, removeServiceBooking } = useCartStore()
   const navigate = useNavigate()
   const itemCount = items.reduce((sum, item) => sum + item.qty, 0)
+  const serviceTotal = serviceBookings.reduce((sum, b) => sum + (b.visiting_charge || 200) + (b.extra_charges || 0), 0)
   const deliveryCharge = total >= 500 ? 0 : 50
-  const grandTotal = total + deliveryCharge
+  const grandTotal = total + deliveryCharge + serviceTotal
 
   if (items.length === 0) {
     return (
@@ -77,7 +78,7 @@ export default function Cart() {
                       type="button"
                       className="cart-row__service-btn"
                       style={{ '--svc-accent': svc.accent }}
-                      onClick={() => navigate(`/services?type=${svc.type}`)}
+                      onClick={() => navigate(`/services?type=${svc.type}&from=cart`)}
                     >
                       {svc.icon} Need a {svc.label}? · ₹200
                     </button>
@@ -134,10 +135,42 @@ export default function Cart() {
             </p>
           ) : null}
 
+          {serviceBookings.length > 0 && (
+            <div className="cart-service-summary">
+              <p className="cart-service-summary__heading">🛠️ Technician Services</p>
+              {serviceBookings.map(b => {
+                const svc = SERVICE_MATCH.find(s => s.type === b.service_type)
+                return (
+                  <div key={b.service_type} className="cart-service-summary__row">
+                    <div className="cart-service-summary__info">
+                      <span>{svc?.icon} {svc?.label}</span>
+                      <span className="cart-service-summary__meta">
+                        {b.scheduled_date} · {b.time_slot}
+                      </span>
+                    </div>
+                    <div className="cart-service-summary__right">
+                      <span>{formatCurrency((b.visiting_charge || 200) + (b.extra_charges || 0))}</span>
+                      <button
+                        type="button"
+                        className="cart-service-summary__remove"
+                        onClick={() => removeServiceBooking(b.service_type)}
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
           <div className="order-total">
             <span>Total</span>
             <strong>{formatCurrency(grandTotal)}</strong>
           </div>
+          {serviceBookings.length > 0 && (
+            <p className="summary-note">Includes {serviceBookings.length} technician service{serviceBookings.length > 1 ? 's' : ''}</p>
+          )}
 
           <div className="stack-actions">
             <button

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import useAuthStore from '../store/authStore'
+import useCartStore from '../store/cartStore'
 
 const SERVICE_TYPES = [
   {
@@ -54,6 +55,9 @@ export default function Services() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const { user } = useAuthStore()
+
+  const addServiceBooking = useCartStore(s => s.addServiceBooking)
+  const fromCart = searchParams.get('from') === 'cart'
 
   const [selected, setSelected] = useState(searchParams.get('type') || '')
   const [form, setForm] = useState({ ...EMPTY_FORM, service_type: searchParams.get('type') || '' })
@@ -127,6 +131,24 @@ export default function Services() {
       return
     }
 
+    // Add to cart store so it appears in cart bill
+    addServiceBooking({
+      id: data.id,
+      service_type: data.service_type,
+      customer_name: data.customer_name,
+      customer_phone: data.customer_phone,
+      scheduled_date: data.scheduled_date,
+      time_slot: data.time_slot,
+      visiting_charge: data.visiting_charge,
+      extra_charges: data.extra_charges || 0
+    })
+
+    if (fromCart) {
+      // Go back to cart immediately, no done screen
+      navigate('/cart')
+      return
+    }
+
     setDone(data)
     setForm({ ...EMPTY_FORM })
     setSelected('')
@@ -176,6 +198,12 @@ export default function Services() {
     <div className="storefront-page">
       {/* Hero */}
       <section className="shell" style={{ paddingTop: 20 }}>
+        {fromCart && (
+          <div className="service-from-cart-banner">
+            🛒 You're booking a technician to go with your cart order.
+            Once booked, you'll be taken back to review the full bill.
+          </div>
+        )}
         <div className="service-hero reveal">
           <div>
             <h1 className="service-hero__title">Book a Technician</h1>
