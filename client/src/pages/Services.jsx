@@ -315,7 +315,10 @@ export default function Services() {
             onClick={handleSubmit}
             disabled={submitting}
           >
-            {submitting ? 'Booking...' : '📅 Book Technician'}
+            {submitting
+              ? 'Booking...'
+              : `📅 Book ${SERVICE_TYPES.find(s => s.id === selected)?.label || 'Technician'}`
+            }
           </button>
         </div>
       </section>
