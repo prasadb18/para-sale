@@ -434,6 +434,165 @@ router.post('/payments/razorpay/verify', async (req, res) => {
   })
 })
 
+// ── Push notification helpers ─────────────────────────────────────────────────
+const EXPO_PUSH_URL = 'https://exp.host/--/exponent-push-notifications/v2/push/send'
+
+const sendExpoPush = async (token, title, body, data = {}) => {
+  if (!token?.startsWith('ExponentPushToken')) return { ok: false, reason: 'invalid token' }
+  const res = await fetch(EXPO_PUSH_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({ to: token, title, body, data, sound: 'default' }),
+  })
+  return res.json()
+}
+
+const ORDER_MESSAGES = {
+  confirmed:  { title: 'Order Confirmed! 📦', body: 'Your order has been confirmed and is being prepared.' },
+  dispatched: { title: 'Out for Delivery! 🚚', body: 'Your order is on its way to you.' },
+  delivered:  { title: 'Order Delivered! ✅', body: 'Your order has been delivered. Enjoy!' },
+  cancelled:  { title: 'Order Cancelled', body: 'Your order has been cancelled.' },
+}
+
+const BOOKING_MESSAGES = {
+  confirmed: { title: 'Booking Confirmed! 🛠️', body: 'Your technician booking has been confirmed.' },
+  assigned:  { title: 'Technician Assigned! 👷', body: 'A technician has been assigned to your booking.' },
+  completed: { title: 'Service Completed! ✅', body: 'Your service booking has been marked as completed.' },
+  cancelled: { title: 'Booking Cancelled', body: 'Your technician booking has been cancelled.' },
+}
+
+// POST /api/notifications/order-update  — called by Supabase Database Webhook
+router.post('/notifications/order-update', jsonParser, async (req, res) => {
+  const webhookSecret = process.env.SUPABASE_WEBHOOK_SECRET
+  if (webhookSecret) {
+    const incomingSecret = req.get('x-webhook-secret') || req.get('authorization')?.replace('Bearer ', '')
+    if (incomingSecret !== webhookSecret) {
+      return res.status(401).json({ error: 'Unauthorized' })
+    }
+  }
+
+  const { record, old_record, table } = req.body || {}
+  if (!record) return res.json({ sent: false, reason: 'no record' })
+
+  const statusChanged = record.status !== old_record?.status
+  if (!statusChanged) return res.json({ sent: false, reason: 'status unchanged' })
+
+  const userId = record.user_id
+  if (!userId) return res.json({ sent: false, reason: 'guest — no push token' })
+
+  try {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('push_token')
+      .eq('id', userId)
+      .single()
+
+    const token = profile?.push_token
+    if (!token) return res.json({ sent: false, reason: 'no push token' })
+
+    const messages = table === 'service_bookings' ? BOOKING_MESSAGES : ORDER_MESSAGES
+    const msg = messages[record.status]
+    if (!msg) return res.json({ sent: false, reason: `no message for status: ${record.status}` })
+
+    const screen = table === 'service_bookings' ? 'MyBookings' : 'Orders'
+    const result = await sendExpoPush(token, msg.title, msg.body, { screen })
+    return res.json({ sent: true, result })
+  } catch (err) {
+    console.error('[notifications/order-update] error:', err)
+    return res.status(500).json({ error: err.message })
+  }
+})
+
+// POST /api/notifications/send  — manual / test send
+router.post('/notifications/send', async (req, res) => {
+  const { token, title, body, data } = req.body || {}
+  if (!token || !title || !body) {
+    return res.status(400).json({ error: 'token, title and body are required' })
+  }
+  try {
+    const result = await sendExpoPush(token, title, body, data)
+    res.json({ sent: true, result })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
+// ── Product Variants ──────────────────────────────────────────────────────────
+
+// GET /api/products/:id/variants
+router.get('/products/:id/variants', async (req, res) => {
+  const { id } = req.params
+  const { data, error } = await supabase
+    .from('product_variants')
+    .select('id, attribute_name, value, price, mrp, stock, sku, sort_order')
+    .eq('product_id', id)
+    .order('sort_order', { ascending: true })
+  if (error) return res.status(500).json({ error: error.message })
+  res.json(data)
+})
+
+// ── Product Reviews ───────────────────────────────────────────────────────────
+
+// GET /api/products/:id/reviews
+router.get('/products/:id/reviews', async (req, res) => {
+  const { id } = req.params
+  const { data, error } = await supabase
+    .from('product_reviews')
+    .select('id, rating, review_text, reviewer_name, created_at, user_id')
+    .eq('product_id', id)
+    .order('created_at', { ascending: false })
+  if (error) return res.status(500).json({ error: error.message })
+  res.json(data)
+})
+
+// GET /api/products/:id/reviews/summary
+router.get('/products/:id/reviews/summary', async (req, res) => {
+  const { id } = req.params
+  const { data, error } = await supabase
+    .from('product_reviews')
+    .select('rating')
+    .eq('product_id', id)
+  if (error) return res.status(500).json({ error: error.message })
+
+  const count = data.length
+  const avg = count ? Math.round((data.reduce((s, r) => s + r.rating, 0) / count) * 10) / 10 : 0
+  const dist = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 }
+  data.forEach(r => { dist[r.rating] = (dist[r.rating] || 0) + 1 })
+  res.json({ avg, count, dist })
+})
+
+// POST /api/products/:id/reviews
+router.post('/products/:id/reviews', async (req, res) => {
+  const { id } = req.params
+  const { user_id, rating, review_text, reviewer_name } = req.body || {}
+  if (!user_id || !rating) return res.status(400).json({ error: 'user_id and rating required' })
+  if (rating < 1 || rating > 5) return res.status(400).json({ error: 'rating must be 1-5' })
+  const { data, error } = await supabase
+    .from('product_reviews')
+    .upsert(
+      { product_id: id, user_id, rating, review_text: review_text || null, reviewer_name: reviewer_name || 'User' },
+      { onConflict: 'product_id,user_id' }
+    )
+    .select()
+    .single()
+  if (error) return res.status(500).json({ error: error.message })
+  res.json(data)
+})
+
+// DELETE /api/products/:id/reviews/:reviewId
+router.delete('/products/:id/reviews/:reviewId', async (req, res) => {
+  const { reviewId } = req.params
+  const { user_id } = req.body || {}
+  if (!user_id) return res.status(400).json({ error: 'user_id required' })
+  const { error } = await supabase
+    .from('product_reviews')
+    .delete()
+    .eq('id', reviewId)
+    .eq('user_id', user_id)
+  if (error) return res.status(500).json({ error: error.message })
+  res.json({ deleted: true })
+})
+
 app.use('/api', router)
 
 const clientDist = path.join(__dirname, '..', 'client', 'dist')
