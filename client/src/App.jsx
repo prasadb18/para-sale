@@ -19,6 +19,11 @@ import AdminBookings from './pages/admin/Bookings'
 import Technicians from './pages/admin/Technicians'
 import Services from './pages/Services'
 import MyBookings from './pages/MyBookings'
+import Coupons from './pages/Coupons'
+import HelpSupport from './pages/HelpSupport'
+import Wishlist from './pages/Wishlist'
+import Compare from './pages/Compare'
+import Profile from './pages/Profile'
 import Navbar from './components/Navbar'
 import CartNotice from './components/CartNotice'
 import InstallBanner from './components/InstallBanner'
@@ -88,6 +93,11 @@ export default function App() {
 
       <Route path="/services" element={<StorefrontPage><Services /></StorefrontPage>} />
       <Route path="/my-bookings" element={<StorefrontPage><ProtectedRoute><MyBookings /></ProtectedRoute></StorefrontPage>} />
+      <Route path="/coupons" element={<StorefrontPage><Coupons /></StorefrontPage>} />
+      <Route path="/help" element={<StorefrontPage><HelpSupport /></StorefrontPage>} />
+      <Route path="/wishlist" element={<StorefrontPage><Wishlist /></StorefrontPage>} />
+      <Route path="/compare" element={<StorefrontPage><Compare /></StorefrontPage>} />
+      <Route path="/profile" element={<StorefrontPage><ProtectedRoute><Profile /></ProtectedRoute></StorefrontPage>} />
 
       <Route path="/admin" element={<Admin><Dashboard /></Admin>} />
       <Route path="/admin/orders" element={<Admin><AdminOrders /></Admin>} />

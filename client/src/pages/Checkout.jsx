@@ -89,11 +89,17 @@ export default function Checkout() {
   const [coupon, setCoupon] = useState(null)   // { discount, label } when valid
   const [couponError, setCouponError] = useState('')
 
+  // Wallet state
+  const [walletBalance, setWalletBalance] = useState(0)
+  const [useWallet, setUseWallet] = useState(false)
+
   const deliveryCity = isGuest ? guestInfo.city : selectedAddress?.city
   const deliveryCharge = total < 500 ? 50 : 0
   const couponDiscount = coupon?.discount || 0
   const serviceTotal = serviceBookings.reduce((sum, b) => sum + (b.visiting_charge || 200) + (b.extra_charges || 0), 0)
-  const grandTotal = total + deliveryCharge - couponDiscount + serviceTotal
+  const preWalletTotal = total + deliveryCharge - couponDiscount + serviceTotal
+  const walletCredit = useWallet ? Math.min(walletBalance, preWalletTotal) : 0
+  const grandTotal = preWalletTotal - walletCredit
   const freeDeliveryGap = Math.max(500 - total, 0)
   const itemCount = items.reduce((sum, item) => sum + item.qty, 0)
   const deliveryEta = getEtaByLocation(deliveryCity)
@@ -122,6 +128,8 @@ export default function Checkout() {
     }
     if (user) {
       fetchAddresses()
+      supabase.from('user_wallets').select('balance').eq('user_id', user.id).maybeSingle()
+        .then(({ data }) => setWalletBalance(Number(data?.balance ?? 0)))
     }
   }, [items.length, step, navigate, user])
 
@@ -238,8 +246,9 @@ export default function Checkout() {
       payment_status: resolvedPaymentStatus,
       subtotal: total,
       delivery_charge: deliveryCharge,
-      discount: couponDiscount || null,
+      discount: (couponDiscount + walletCredit) || null,
       coupon_code: coupon ? couponInput.trim().toUpperCase() : null,
+      wallet_credit: walletCredit || null,
       total: grandTotal
     }
 
@@ -327,6 +336,14 @@ export default function Checkout() {
       await Promise.all(serviceBookings.map(b =>
         supabase.from('service_bookings').update({ order_id: order.id }).eq('id', b.id)
       ))
+    }
+
+    if (walletCredit > 0 && user) {
+      await supabase.rpc('debit_wallet', {
+        p_amount: walletCredit,
+        p_description: `Applied to order #${order.id.slice(0, 8).toUpperCase()}`,
+        p_ref_id: order.id
+      })
     }
 
     trackPurchase({ orderId: order.id, total: grandTotal, deliveryCharge, items })
@@ -951,6 +968,29 @@ export default function Checkout() {
                 Add {formatCurrency(freeDeliveryGap)} more for free delivery.
               </p>
             ) : null}
+
+            {/* ── Wallet toggle ── */}
+            {!isGuest && walletBalance > 0 && (
+              <button
+                type="button"
+                className={`wallet-toggle ${useWallet ? 'wallet-toggle--active' : ''}`}
+                onClick={() => setUseWallet(v => !v)}
+              >
+                <div>
+                  <p className="wallet-toggle__title">💳 Use Wallet Credits</p>
+                  <p className="wallet-toggle__sub">Balance: {formatCurrency(walletBalance)}{useWallet ? ` · Saving ${formatCurrency(walletCredit)}` : ''}</p>
+                </div>
+                <span className={`wallet-toggle__check ${useWallet ? 'wallet-toggle__check--on' : ''}`}>
+                  {useWallet ? '✓' : '○'}
+                </span>
+              </button>
+            )}
+            {walletCredit > 0 && (
+              <div className="bill-row coupon-applied-row">
+                <span>Wallet credit</span>
+                <span className="coupon-discount">−{formatCurrency(walletCredit)}</span>
+              </div>
+            )}
 
             {/* ── Coupon input ── */}
             {!coupon ? (

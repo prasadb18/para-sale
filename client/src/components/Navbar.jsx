@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import useCartStore from '../store/cartStore'
 import useAuthStore from '../store/authStore'
 import useLocationStore from '../store/locationStore'
+import useWishlistStore from '../store/wishlistStore'
 import LocationPicker from './LocationPicker'
 
 export default function Navbar() {
@@ -10,11 +11,13 @@ export default function Navbar() {
   const total = useCartStore(s => s.total)
   const { user, signOut } = useAuthStore()
   const { location: deliveryLocation } = useLocationStore()
+  const wishlistCount = useWishlistStore(s => s.items.length)
   const routerLocation = useLocation()
   const navigate = useNavigate()
   const [searchTerm, setSearchTerm] = useState('')
   const [accountOpen, setAccountOpen] = useState(false)
   const [locationOpen, setLocationOpen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
   const accountRef = useRef(null)
 
   useEffect(() => {
@@ -125,19 +128,17 @@ export default function Navbar() {
                     <div className="account-dropdown__user">
                       <span className="account-dropdown__email">{user.email}</span>
                     </div>
-                    <Link
-                      to="/orders"
-                      className="account-dropdown__item"
-                      onClick={() => setAccountOpen(false)}
-                    >
-                      My Orders
+                    <Link to="/profile" className="account-dropdown__item" onClick={() => setAccountOpen(false)}>
+                      👤 My Profile
                     </Link>
-                    <Link
-                      to="/my-bookings"
-                      className="account-dropdown__item"
-                      onClick={() => setAccountOpen(false)}
-                    >
-                      My Bookings
+                    <Link to="/orders" className="account-dropdown__item" onClick={() => setAccountOpen(false)}>
+                      📋 My Orders
+                    </Link>
+                    <Link to="/my-bookings" className="account-dropdown__item" onClick={() => setAccountOpen(false)}>
+                      🛠️ My Bookings
+                    </Link>
+                    <Link to="/wishlist" className="account-dropdown__item" onClick={() => setAccountOpen(false)}>
+                      ❤️ Wishlist {wishlistCount > 0 && `(${wishlistCount})`}
                     </Link>
                     <button
                       type="button"
@@ -148,13 +149,18 @@ export default function Navbar() {
                     </button>
                   </>
                 ) : (
-                  <button
-                    type="button"
-                    className="account-dropdown__item"
-                    onClick={() => { setAccountOpen(false); navigate('/login') }}
-                  >
-                    Sign in
-                  </button>
+                  <>
+                    <button
+                      type="button"
+                      className="account-dropdown__item"
+                      onClick={() => { setAccountOpen(false); navigate('/login') }}
+                    >
+                      Sign in
+                    </button>
+                    <Link to="/wishlist" className="account-dropdown__item" onClick={() => setAccountOpen(false)}>
+                      ❤️ Wishlist {wishlistCount > 0 && `(${wishlistCount})`}
+                    </Link>
+                  </>
                 )}
               </div>
             )}
@@ -173,8 +179,32 @@ export default function Navbar() {
             </div>
           </Link>
 
+          {/* Hamburger — mobile only */}
+          <button
+            type="button"
+            className="topbar__hamburger"
+            onClick={() => setMenuOpen(v => !v)}
+            aria-label="Open menu"
+          >
+            <span /><span /><span />
+          </button>
+
         </div>
       </header>
+
+      {/* Secondary nav */}
+      <nav className={`subnav ${menuOpen ? 'subnav--open' : ''}`}>
+        <div className="subnav__inner">
+          <Link to="/products" className="subnav__link" onClick={() => setMenuOpen(false)}>Products</Link>
+          <Link to="/services" className="subnav__link" onClick={() => setMenuOpen(false)}>Services</Link>
+          <Link to="/coupons" className="subnav__link" onClick={() => setMenuOpen(false)}>🏷️ Coupons</Link>
+          <Link to="/compare" className="subnav__link" onClick={() => setMenuOpen(false)}>⚖️ Compare</Link>
+          <Link to="/help" className="subnav__link" onClick={() => setMenuOpen(false)}>🛟 Help</Link>
+          {user
+            ? <Link to="/profile" className="subnav__link" onClick={() => setMenuOpen(false)}>👤 Profile</Link>
+            : <Link to="/login" className="subnav__link" onClick={() => setMenuOpen(false)}>Sign In</Link>}
+        </div>
+      </nav>
 
       {locationOpen && (
         <LocationPicker onClose={() => setLocationOpen(false)} />

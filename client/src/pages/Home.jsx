@@ -2,8 +2,27 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { getCategories, getProducts } from '../api'
 import ProductCard from '../components/ProductCard'
-import { getCategoryMeta } from '../lib/storefront'
+import { getCategoryMeta, formatCurrency, getDiscountPercent } from '../lib/storefront'
 import useCartStore from '../store/cartStore'
+import { imgUrl } from '../lib/imgUrl'
+
+function useFlashTimer() {
+  const getSecondsLeft = () => {
+    const now = new Date()
+    const midnight = new Date(now)
+    midnight.setHours(24, 0, 0, 0)
+    return Math.max(0, Math.floor((midnight - now) / 1000))
+  }
+  const [secs, setSecs] = useState(getSecondsLeft)
+  useEffect(() => {
+    const id = setInterval(() => setSecs(getSecondsLeft()), 1000)
+    return () => clearInterval(id)
+  }, [])
+  const h = String(Math.floor(secs / 3600)).padStart(2, '0')
+  const m = String(Math.floor((secs % 3600) / 60)).padStart(2, '0')
+  const s = String(secs % 60).padStart(2, '0')
+  return `${h}:${m}:${s}`
+}
 
 const KITS = [
   {
@@ -74,6 +93,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true)
   const navigate = useNavigate()
   const addItem = useCartStore(s => s.addItem)
+  const flashTimer = useFlashTimer()
 
   useEffect(() => {
     let isMounted = true
@@ -94,6 +114,10 @@ export default function Home() {
   const featuredProducts = products.slice(0, 8)
   const inStockProducts = products.filter(p => Number(p.stock || 0) > 0)
   const primaryCategory = categories[0]
+  const flashDeals = products
+    .filter(p => Number(p.stock || 0) > 0 && Number(p.mrp || 0) > Number(p.price || 0))
+    .sort((a, b) => getDiscountPercent(b.price, b.mrp) - getDiscountPercent(a.price, a.mrp))
+    .slice(0, 6)
 
   const scrollToCategories = () => {
     const el = document.getElementById('store-categories')
@@ -217,6 +241,49 @@ export default function Home() {
           </div>
         )}
       </section>
+
+      {/* ── Flash Deals ── */}
+      {flashDeals.length > 0 && (
+        <section className="storefront-section shell">
+          <div className="flash-header">
+            <div className="flash-title-row">
+              <span className="flash-title">⚡ Flash Deals</span>
+              <span className="flash-timer-pill">Ends in {flashTimer}</span>
+            </div>
+            <button type="button" className="text-link" onClick={() => navigate('/products')}>View all →</button>
+          </div>
+          <div className="flash-strip">
+            {flashDeals.map(p => {
+              const disc = getDiscountPercent(p.price, p.mrp)
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  className="flash-card reveal"
+                  onClick={() => navigate(`/product/${p.id}`)}
+                >
+                  {disc > 0 && <span className="flash-disc-badge">{disc}% off</span>}
+                  {p.image_url
+                    ? <img src={imgUrl(p.image_url, { width: 160 })} alt={p.name} className="flash-card__img" />
+                    : <div className="flash-card__placeholder">📦</div>}
+                  <p className="flash-card__name">{p.name}</p>
+                  <div className="flash-card__price-row">
+                    <span className="flash-card__price">{formatCurrency(p.price)}</span>
+                    {disc > 0 && <span className="flash-card__mrp">{formatCurrency(p.mrp)}</span>}
+                  </div>
+                  <button
+                    type="button"
+                    className="flash-card__add-btn"
+                    onClick={e => { e.stopPropagation(); addItem(p) }}
+                  >
+                    + Add
+                  </button>
+                </button>
+              )
+            })}
+          </div>
+        </section>
+      )}
 
       {/* ── Featured Products ── */}
       {featuredProducts.length > 0 && (
