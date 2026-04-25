@@ -47,6 +47,9 @@ const initialAddressForm = {
 const supportsExtendedPaymentColumns = (message = '') =>
   /razorpay_|payment_gateway|paid_at|payment_gateway_payload/i.test(message)
 
+const supportsVariantLabelColumn = (message = '') =>
+  /variant_label/i.test(message)
+
 function validateGuestInfo(info) {
   const errs = {}
   if (!info.name.trim()) errs.name = 'Enter your name.'
@@ -320,15 +323,26 @@ export default function Checkout() {
 
     const orderItems = items.map(item => ({
       order_id: order.id,
-      product_id: item.id,
+      product_id: item.productId ?? item.id,
       quantity: item.qty,
-      price_at_order: item.price
+      price_at_order: item.price,
+      variant_label: item.variantLabel ?? null
     }))
 
-    await supabase.from('order_items').insert(orderItems)
+    let { error: orderItemsError } = await supabase.from('order_items').insert(orderItems)
+
+    if (orderItemsError && supportsVariantLabelColumn(orderItemsError.message)) {
+      const fallbackOrderItems = orderItems.map(({ variant_label: _variantLabel, ...item }) => item)
+      const retry = await supabase.from('order_items').insert(fallbackOrderItems)
+      orderItemsError = retry.error
+    }
+
+    if (orderItemsError) {
+      throw new Error(orderItemsError.message || 'Could not save order items.')
+    }
 
     for (const item of items) {
-      await supabase.rpc('decrement_stock', { product_id: item.id, qty: item.qty })
+      await supabase.rpc('decrement_stock', { product_id: item.productId ?? item.id, qty: item.qty })
     }
 
     // Link service bookings to this order

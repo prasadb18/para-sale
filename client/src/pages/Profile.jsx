@@ -8,6 +8,12 @@ export default function Profile() {
   const { user, signOut } = useAuthStore()
   const navigate = useNavigate()
 
+  const [fullName, setFullName] = useState('')
+  const [phone, setPhone] = useState('')
+  const [editName, setEditName] = useState('')
+  const [editPhone, setEditPhone] = useState('')
+  const [editing, setEditing] = useState(false)
+  const [savingProfile, setSavingProfile] = useState(false)
   const [walletBalance, setWalletBalance] = useState(0)
   const [referralCode,  setReferralCode]  = useState('')
   const [transactions,  setTransactions]  = useState([])
@@ -24,8 +30,10 @@ export default function Profile() {
       .then(({ data }) => setWalletBalance(Number(data?.balance ?? 0)))
 
     // Load / generate referral code
-    supabase.from('profiles').select('referral_code').eq('id', user.id).single()
+    supabase.from('profiles').select('full_name, phone, referral_code').eq('id', user.id).single()
       .then(async ({ data }) => {
+        setFullName(data?.full_name ?? '')
+        setPhone(data?.phone ?? '')
         let code = data?.referral_code || ''
         if (!code) {
           code = user.id.replace(/-/g, '').slice(0, 8).toUpperCase()
@@ -43,6 +51,51 @@ export default function Profile() {
       .limit(10)
       .then(({ data }) => { setTransactions(data || []); setTxLoading(false) })
   }, [user])
+
+  const startEditing = () => {
+    setEditName(fullName)
+    setEditPhone(phone)
+    setEditing(true)
+  }
+
+  const saveProfile = async () => {
+    if (!editName.trim()) {
+      alert('Please enter your full name.')
+      return
+    }
+    if (editPhone.trim() && !/^\d{10}$/.test(editPhone.trim())) {
+      alert('Please enter a valid 10-digit phone number.')
+      return
+    }
+    setSavingProfile(true)
+    const { error } = await supabase.from('profiles').upsert({
+      id: user.id,
+      full_name: editName.trim(),
+      phone: editPhone.trim() || null
+    })
+    setSavingProfile(false)
+    if (error) {
+      alert(error.message || 'Could not save your profile.')
+      return
+    }
+    setFullName(editName.trim())
+    setPhone(editPhone.trim())
+    setEditing(false)
+  }
+
+  const deleteAccount = async () => {
+    const confirmed = window.confirm('Delete your account and all linked data permanently? This cannot be undone.')
+    if (!confirmed) return
+    const doubleConfirmed = window.confirm(`Final confirmation for ${user.email}. Orders, bookings, addresses, and profile data will be erased.`)
+    if (!doubleConfirmed) return
+    const { error } = await supabase.rpc('delete_own_account')
+    if (error) {
+      alert(error.message || 'Could not delete your account.')
+      return
+    }
+    await signOut()
+    navigate('/login')
+  }
 
   const handleClaim = async () => {
     const code = claimInput.trim().toUpperCase()
@@ -88,6 +141,38 @@ export default function Profile() {
   return (
     <div className="storefront-page shell">
       <h1 className="page-header__title" style={{ marginBottom: 24 }}>My Profile</h1>
+
+      <div className="profile-card">
+        <div className="profile-account-head">
+          <div>
+            <h2 className="profile-card__title">Account</h2>
+            <p className="profile-account__meta">{user.email}</p>
+            {phone ? <p className="profile-account__meta">Phone: {phone}</p> : null}
+          </div>
+          <button className="button button--secondary button--sm" onClick={startEditing}>
+            Edit Profile
+          </button>
+        </div>
+
+        {editing && (
+          <div className="profile-edit-grid">
+            <label className="field">
+              <span>Full name</span>
+              <input className="form-input" value={editName} onChange={e => setEditName(e.target.value)} />
+            </label>
+            <label className="field">
+              <span>Phone</span>
+              <input className="form-input" value={editPhone} onChange={e => setEditPhone(e.target.value.replace(/\D/g, '').slice(0, 10))} />
+            </label>
+            <div className="profile-edit-actions">
+              <button className="button button--secondary button--sm" onClick={() => setEditing(false)}>Cancel</button>
+              <button className="button button--primary button--sm" onClick={saveProfile} disabled={savingProfile}>
+                {savingProfile ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Wallet card */}
       <div className="profile-card">
@@ -166,6 +251,8 @@ export default function Profile() {
             { label: '🛠️ My Bookings', href: '/my-bookings' },
             { label: '❤️ Wishlist', href: '/wishlist' },
             { label: '🏷️ Coupons', href: '/coupons' },
+            { label: '🔔 Notification Preferences', href: '/notification-preferences' },
+            { label: '🔒 Privacy Policy', href: '/privacy-policy' },
             { label: '🛟 Help & Support', href: '/help' },
           ].map(({ label, href }) => (
             <button key={href} className="profile-link-btn" onClick={() => navigate(href)}>
@@ -181,6 +268,14 @@ export default function Profile() {
         onClick={async () => { await signOut(); navigate('/login') }}
       >
         Sign Out
+      </button>
+
+      <button
+        className="button button--secondary"
+        style={{ marginTop: 12, width: '100%', borderColor: '#fecaca', color: '#b91c1c', background: '#fff5f5' }}
+        onClick={deleteAccount}
+      >
+        Delete Account
       </button>
     </div>
   )

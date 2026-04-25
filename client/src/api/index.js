@@ -16,6 +16,21 @@ export const getProducts = (categorySlug, searchQuery) => {
 }
 export const getProduct = (id) => api.get(`/products/${id}`)
 
+export const getProductVariants = (productId) =>
+  api.get(`/products/${productId}/variants`)
+
+export const getProductReviews = (productId) =>
+  api.get(`/products/${productId}/reviews`)
+
+export const getProductReviewSummary = (productId) =>
+  api.get(`/products/${productId}/reviews/summary`)
+
+export const submitReview = (productId, payload) =>
+  api.post(`/products/${productId}/reviews`, payload)
+
+export const deleteReview = (productId, reviewId, user_id) =>
+  api.delete(`/products/${productId}/reviews/${reviewId}`, { data: { user_id } })
+
 export const createRazorpayOrder = (payload) =>
   api.post('/payments/razorpay/order', payload)
 

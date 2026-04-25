@@ -40,6 +40,7 @@ export default function Footer() {
           <section>
             <h3 className="site-footer__title">Policies</h3>
             <nav className="site-footer__links" aria-label="Policy links">
+              <Link to="/privacy-policy">Privacy Policy</Link>
               <span>Cash on Delivery available</span>
               <span>Free delivery on orders above ₹500</span>
               <span>7-day exchange on manufacturing defects</span>
@@ -54,6 +55,7 @@ export default function Footer() {
               <a href="mailto:support@1shopstore.com">support@1shopstore.com</a>
               <span>Mon – Sat, 9:30 AM – 9:30 PM</span>
               <span>Delivery zones: Palava · Dombivli East · Kalyan</span>
+              <Link to="/notification-preferences">Notification Preferences</Link>
               <Link to="/login">Sign in / Create account</Link>
             </nav>
           </section>

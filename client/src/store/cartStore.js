@@ -56,12 +56,14 @@ const buildCartState = (items) => ({
 })
 
 const buildAddNotice = (product, items) => {
-  const cartItem = items.find(item => item.id === product.id)
+  const baseId = product.productId ?? product.id
+  const variantKey = product.variantId ? `${baseId}_${product.variantId}` : String(baseId)
+  const cartItem = items.find(item => String(item.id) === variantKey)
   const count = items.reduce((sum, item) => sum + Number(item.qty || 0), 0)
 
   return {
-    key: `${product.id}-${Date.now()}`,
-    productId: product.id,
+    key: `${variantKey}-${Date.now()}`,
+    productId: baseId,
     name: product.name,
     productQty: Number(cartItem?.qty || 1),
     count
@@ -75,10 +77,14 @@ const useCartStore = create((set) => ({
 
   addItem: (product) =>
     set((state) => {
-      const existing = state.items.find(item => item.id === product.id)
+      const baseId = product.productId ?? product.id
+      const cartId = product.variantId
+        ? `${baseId}_${product.variantId}`
+        : String(baseId)
+      const existing = state.items.find(item => String(item.id) === cartId)
       const nextItems = existing
         ? state.items.map(item =>
-            item.id === product.id
+            String(item.id) === cartId
               ? { ...item, qty: Number(item.qty || 0) + 1 }
               : item
           )
@@ -86,6 +92,8 @@ const useCartStore = create((set) => ({
             ...state.items,
             {
               ...product,
+              id: cartId,
+              productId: baseId,
               price: Number(product.price || 0),
               mrp: Number(product.mrp || 0),
               qty: 1

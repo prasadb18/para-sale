@@ -9,6 +9,7 @@ import Cart from './pages/Cart'
 import Login from './pages/Login'
 import Checkout from './pages/Checkout'
 import Orders from './pages/Orders'
+import OrderTracking from './pages/OrderTracking'
 import ResetPassword from './pages/ResetPassword'
 import Dashboard from './pages/admin/Dashboard'
 import AdminOrders from './pages/admin/Orders'
@@ -24,6 +25,8 @@ import HelpSupport from './pages/HelpSupport'
 import Wishlist from './pages/Wishlist'
 import Compare from './pages/Compare'
 import Profile from './pages/Profile'
+import NotificationPreferences from './pages/NotificationPreferences'
+import PrivacyPolicy from './pages/PrivacyPolicy'
 import Navbar from './components/Navbar'
 import CartNotice from './components/CartNotice'
 import InstallBanner from './components/InstallBanner'
@@ -90,6 +93,7 @@ export default function App() {
       <Route path="/cart" element={<StorefrontPage><Cart /></StorefrontPage>} />
       <Route path="/checkout" element={<StorefrontPage><Checkout /></StorefrontPage>} />
       <Route path="/orders" element={<StorefrontPage><ProtectedRoute><Orders /></ProtectedRoute></StorefrontPage>} />
+      <Route path="/orders/:id/track" element={<StorefrontPage><ProtectedRoute><OrderTracking /></ProtectedRoute></StorefrontPage>} />
 
       <Route path="/services" element={<StorefrontPage><Services /></StorefrontPage>} />
       <Route path="/my-bookings" element={<StorefrontPage><ProtectedRoute><MyBookings /></ProtectedRoute></StorefrontPage>} />
@@ -98,6 +102,8 @@ export default function App() {
       <Route path="/wishlist" element={<StorefrontPage><Wishlist /></StorefrontPage>} />
       <Route path="/compare" element={<StorefrontPage><Compare /></StorefrontPage>} />
       <Route path="/profile" element={<StorefrontPage><ProtectedRoute><Profile /></ProtectedRoute></StorefrontPage>} />
+      <Route path="/notification-preferences" element={<StorefrontPage><ProtectedRoute><NotificationPreferences /></ProtectedRoute></StorefrontPage>} />
+      <Route path="/privacy-policy" element={<StorefrontPage><PrivacyPolicy /></StorefrontPage>} />
 
       <Route path="/admin" element={<Admin><Dashboard /></Admin>} />
       <Route path="/admin/orders" element={<Admin><AdminOrders /></Admin>} />

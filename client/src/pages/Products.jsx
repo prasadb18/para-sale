@@ -19,6 +19,9 @@ export default function Products() {
   const navigate = useNavigate()
   const searchQuery = searchParams.get('q')?.trim() || ''
   const activeFilter = searchParams.get('filter') || 'all'
+  const activeSort = searchParams.get('sort') || 'default'
+  const minPrice = searchParams.get('min') || ''
+  const maxPrice = searchParams.get('max') || ''
 
   useEffect(() => {
     let isMounted = true
@@ -53,8 +56,25 @@ export default function Products() {
     : activeFilter === 'offer' ? discountedProducts
     : products
 
-  const totalPages = Math.ceil(displayedProducts.length / PAGE_SIZE)
-  const pageProducts = displayedProducts.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const minNumber = minPrice ? Number(minPrice) : null
+  const maxNumber = maxPrice ? Number(maxPrice) : null
+
+  const filteredProducts = displayedProducts
+    .filter(product => {
+      const price = Number(product.price || 0)
+      if (minNumber !== null && price < minNumber) return false
+      if (maxNumber !== null && price > maxNumber) return false
+      return true
+    })
+    .sort((a, b) => {
+      if (activeSort === 'price_asc') return Number(a.price || 0) - Number(b.price || 0)
+      if (activeSort === 'price_desc') return Number(b.price || 0) - Number(a.price || 0)
+      if (activeSort === 'name_asc') return (a.name || '').localeCompare(b.name || '')
+      return 0
+    })
+
+  const totalPages = Math.ceil(filteredProducts.length / PAGE_SIZE)
+  const pageProducts = filteredProducts.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
   const heroTitle = hasSearch
     ? `Results for "${searchQuery}"`
@@ -63,8 +83,8 @@ export default function Products() {
   const heroEyebrow = hasSearch ? 'Search results' : categorySlug ? 'Category' : 'Catalog'
 
   const sectionTitle =
-    activeFilter === 'instock' ? `${inStockProducts.length} in-stock products`
-    : activeFilter === 'offer' ? `${discountedProducts.length} products on offer`
+    activeFilter === 'instock' ? `${filteredProducts.length} in-stock products`
+    : activeFilter === 'offer' ? `${filteredProducts.length} products on offer`
     : hasSearch ? `Matching products` : categorySlug ? `${categoryLabel}` : 'Browse all products'
 
   const emptyTitle =
@@ -79,6 +99,17 @@ export default function Products() {
     : hasSearch ? 'Try a different keyword or shorter phrase.'
     : categorySlug ? 'Try another category or add inventory from admin.'
     : 'Add inventory from the admin side to populate the storefront.'
+
+  const updateCatalogParams = (updates) => {
+    setSearchParams(prev => {
+      const next = new URLSearchParams(prev)
+      Object.entries(updates).forEach(([key, value]) => {
+        if (!value || value === 'default') next.delete(key)
+        else next.set(key, value)
+      })
+      return next
+    })
+  }
 
   const goToPage = (p) => {
     setPage(p)
@@ -139,16 +170,60 @@ export default function Products() {
           <div>
             <h2 className="section-title">{sectionTitle}</h2>
           </div>
-          {!loading && displayedProducts.length > 0 && totalPages > 1 && (
+          {!loading && filteredProducts.length > 0 && totalPages > 1 && (
             <p className="catalog-note">
               page {page} of {totalPages}
             </p>
           )}
         </div>
 
+        <div className="catalog-toolbar panel">
+          <div className="catalog-toolbar__group">
+            <label className="catalog-toolbar__label" htmlFor="catalog-sort">Sort</label>
+            <select
+              id="catalog-sort"
+              className="form-input catalog-toolbar__select"
+              value={activeSort}
+              onChange={e => updateCatalogParams({ sort: e.target.value })}
+            >
+              <option value="default">Featured</option>
+              <option value="price_asc">Price: Low to High</option>
+              <option value="price_desc">Price: High to Low</option>
+              <option value="name_asc">Name: A to Z</option>
+            </select>
+          </div>
+          <div className="catalog-toolbar__group catalog-toolbar__group--range">
+            <label className="catalog-toolbar__label" htmlFor="catalog-min">Price Range</label>
+            <div className="catalog-toolbar__range">
+              <input
+                id="catalog-min"
+                className="form-input"
+                inputMode="numeric"
+                placeholder="Min"
+                value={minPrice}
+                onChange={e => updateCatalogParams({ min: e.target.value.replace(/\D/g, '') })}
+              />
+              <input
+                className="form-input"
+                inputMode="numeric"
+                placeholder="Max"
+                value={maxPrice}
+                onChange={e => updateCatalogParams({ max: e.target.value.replace(/\D/g, '') })}
+              />
+            </div>
+          </div>
+          <button
+            type="button"
+            className="button button--secondary button--sm"
+            onClick={() => updateCatalogParams({ sort: '', min: '', max: '' })}
+          >
+            Reset Sort & Price
+          </button>
+        </div>
+
         {loading ? (
           <div className="loading-state"><p>Loading products...</p></div>
-        ) : displayedProducts.length === 0 ? (
+        ) : filteredProducts.length === 0 ? (
           <div className="empty-state">
             <p className="empty-state__icon">📦</p>
             <h3 className="empty-state__title">{emptyTitle}</h3>
