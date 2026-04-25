@@ -47,12 +47,7 @@ interface SavedAddress {
 let RazorpayCheckout: any = null
 try { RazorpayCheckout = require('react-native-razorpay').default } catch {}
 
-const COUPONS: Record<string, { type: 'percent' | 'flat'; value: number; minOrder: number; label: string }> = {
-  FIRST10: { type: 'percent', value: 10, minOrder: 0,    label: '10% off your order' },
-  SAVE50:  { type: 'flat',    value: 50, minOrder: 500,  label: '₹50 off on orders above ₹500' },
-  BULK100: { type: 'flat',    value: 100,minOrder: 1000, label: '₹100 off on orders above ₹1000' },
-  WELCOME: { type: 'percent', value: 5,  minOrder: 0,    label: '5% welcome discount' },
-}
+import { COUPONS_MAP as COUPONS } from '../lib/coupons'
 
 const SVC_LABEL: Record<string, string> = { electrical: 'Electrician', plumbing: 'Plumber', painting: 'Painter' }
 
@@ -196,6 +191,16 @@ export default function CheckoutScreen() {
   const [coupon,      setCoupon]      = useState<{ discount: number; label: string } | null>(null)
   const [couponError, setCouponError] = useState('')
 
+  // Wallet
+  const [walletBalance,  setWalletBalance]  = useState(0)
+  const [useWallet,      setUseWallet]      = useState(false)
+
+  useEffect(() => {
+    if (!user) return
+    supabase.from('user_wallets').select('balance').eq('user_id', user.id).maybeSingle()
+      .then(({ data }) => setWalletBalance(Number(data?.balance ?? 0)))
+  }, [user])
+
   // Payment method
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cod')
 
@@ -207,7 +212,9 @@ export default function CheckoutScreen() {
   const deliveryCharge = total >= 500 ? 0 : 50
   const couponDiscount = coupon?.discount || 0
   const serviceTotal   = serviceBookings.reduce((s, b) => s + (b.visiting_charge || 200) + (b.extra_charges || 0), 0)
-  const grandTotal     = total + deliveryCharge - couponDiscount + serviceTotal
+  const preWalletTotal = total + deliveryCharge - couponDiscount + serviceTotal
+  const walletCredit   = useWallet ? Math.min(walletBalance, preWalletTotal) : 0
+  const grandTotal     = preWalletTotal - walletCredit
 
   const applyCoupon = () => {
     const c = COUPONS[couponInput.trim().toUpperCase()]
@@ -239,8 +246,9 @@ export default function CheckoutScreen() {
       payment_status:  'unpaid',
       total:           grandTotal,
       delivery_charge: deliveryCharge,
-      discount:        couponDiscount || null,
+      discount:        (couponDiscount + walletCredit) || null,
       coupon_code:     coupon ? couponInput.trim().toUpperCase() : null,
+      wallet_credit:   walletCredit || null,
       guest_name:      name.trim(),
       guest_phone:     phone.trim(),
       guest_address:   guestAddress,
@@ -274,6 +282,15 @@ export default function CheckoutScreen() {
       await Promise.all(serviceBookings.map(b =>
         supabase.from('service_bookings').update({ order_id: orderId }).eq('id', b.id)
       ))
+    }
+    // Debit wallet credits used
+    if (user && walletCredit > 0) {
+      await supabase.rpc('debit_wallet', {
+        p_amount: walletCredit,
+        p_description: 'Order payment — store credit applied',
+        p_ref_id: orderId,
+      })
+      setWalletBalance(b => b - walletCredit)
     }
     // Save address if user opted in and hasn't selected an existing one
     if (user && saveAddress && !selectedAddrId) {
@@ -502,24 +519,32 @@ export default function CheckoutScreen() {
 
             {/* Save address option — only for logged-in users */}
             {user && (
-              <View style={styles.saveAddrRow}>
-                <TouchableOpacity
-                  style={[styles.saveAddrCheck, saveAddress && styles.saveAddrCheckActive]}
-                  onPress={() => setSaveAddress(v => !v)}
-                >
-                  {saveAddress && <Text style={styles.saveAddrCheckMark}>✓</Text>}
-                </TouchableOpacity>
-                <Text style={styles.saveAddrText}>Save this address</Text>
+              <>
+                <View style={styles.saveAddrRow}>
+                  <TouchableOpacity
+                    style={[styles.saveAddrCheck, saveAddress && styles.saveAddrCheckActive]}
+                    onPress={() => setSaveAddress(v => !v)}
+                  >
+                    {saveAddress && <Text style={styles.saveAddrCheckMark}>✓</Text>}
+                  </TouchableOpacity>
+                  <Text style={styles.saveAddrText}>Save this address</Text>
+                </View>
                 {saveAddress && (
-                  <TextInput
-                    style={styles.addrLabelInput}
-                    value={addrLabel}
-                    onChangeText={setAddrLabel}
-                    placeholder="Label (Home / Work)"
-                    maxLength={20}
-                  />
+                  <View style={styles.addrLabelRow}>
+                    {(['Home', 'Work', 'Site', 'Other'] as const).map(lbl => (
+                      <TouchableOpacity
+                        key={lbl}
+                        style={[styles.addrLabelChip, addrLabel === lbl && styles.addrLabelChipActive]}
+                        onPress={() => setAddrLabel(lbl)}
+                      >
+                        <Text style={[styles.addrLabelChipText, addrLabel === lbl && styles.addrLabelChipTextActive]}>
+                          {lbl === 'Home' ? '🏠' : lbl === 'Work' ? '💼' : lbl === 'Site' ? '🏗️' : '📍'} {lbl}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
                 )}
-              </View>
+              </>
             )}
           </>
         )}
@@ -577,6 +602,11 @@ export default function CheckoutScreen() {
         )}
 
         {/* Coupon */}
+        {!coupon && (
+          <TouchableOpacity style={styles.browseCouponsBtn} onPress={() => (navigation as any).navigate('Coupons', { cartTotal: total, onApply: (code: string) => { setCouponInput(code); applyCoupon() } })}>
+            <Text style={styles.browseCouponsText}>🏷 Browse available coupons →</Text>
+          </TouchableOpacity>
+        )}
         {!coupon ? (
           <View style={styles.couponRow}>
             <TextInput
@@ -603,6 +633,28 @@ export default function CheckoutScreen() {
           <View style={styles.billRow}>
             <Text style={[styles.billLabel, { color: '#16a34a' }]}>Discount</Text>
             <Text style={[styles.billValue, { color: '#16a34a' }]}>−{formatCurrency(couponDiscount)}</Text>
+          </View>
+        )}
+
+        {user && walletBalance > 0 && (
+          <TouchableOpacity
+            style={[styles.walletToggle, useWallet && styles.walletToggleActive]}
+            onPress={() => setUseWallet(v => !v)}
+            activeOpacity={0.8}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={styles.walletToggleTitle}>💳 Use Wallet Credits</Text>
+              <Text style={styles.walletToggleSub}>{formatCurrency(walletBalance)} available</Text>
+            </View>
+            <View style={[styles.walletToggleCheck, useWallet && styles.walletToggleCheckOn]}>
+              <Text style={{ color: useWallet ? '#fff' : '#9ca3af', fontSize: 14 }}>✓</Text>
+            </View>
+          </TouchableOpacity>
+        )}
+        {useWallet && walletCredit > 0 && (
+          <View style={styles.billRow}>
+            <Text style={[styles.billLabel, { color: '#0c64c0' }]}>💳 Wallet Credit</Text>
+            <Text style={[styles.billValue, { color: '#0c64c0' }]}>−{formatCurrency(walletCredit)}</Text>
           </View>
         )}
 
@@ -683,6 +735,18 @@ const styles = StyleSheet.create({
   billRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
   billLabel: { fontSize: 14, color: '#6b7280' },
   billValue: { fontSize: 14, color: '#374151', fontWeight: '500' },
+  browseCouponsBtn: { marginBottom: 10 },
+  browseCouponsText: { fontSize: 13, color: '#0c64c0', fontWeight: '600' },
+  walletToggle: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    backgroundColor: '#f0fdf4', borderRadius: 10, padding: 12,
+    borderWidth: 1.5, borderColor: '#bbf7d0', marginBottom: 10,
+  },
+  walletToggleActive:    { borderColor: '#0c64c0', backgroundColor: '#eff6ff' },
+  walletToggleTitle:     { fontSize: 14, fontWeight: '700', color: '#111827' },
+  walletToggleSub:       { fontSize: 12, color: '#6b7280', marginTop: 1 },
+  walletToggleCheck:     { width: 26, height: 26, borderRadius: 13, borderWidth: 1.5, borderColor: '#d1d5db', alignItems: 'center', justifyContent: 'center' },
+  walletToggleCheckOn:   { backgroundColor: '#0c64c0', borderColor: '#0c64c0' },
   couponRow: { flexDirection: 'row', gap: 10, alignItems: 'center', marginBottom: 12 },
   couponBtn: {
     backgroundColor: '#f3f4f6', borderRadius: 10,
@@ -766,4 +830,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10, paddingVertical: 6, fontSize: 13,
     backgroundColor: '#f9fafb', minWidth: 120,
   },
+  addrLabelRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap', marginTop: 8, marginBottom: 4 },
+  addrLabelChip: {
+    borderWidth: 1.5, borderColor: '#d1d5db', borderRadius: 20,
+    paddingHorizontal: 14, paddingVertical: 7, backgroundColor: '#fff',
+  },
+  addrLabelChipActive: { borderColor: '#2563eb', backgroundColor: '#eff6ff' },
+  addrLabelChipText:       { fontSize: 13, fontWeight: '600', color: '#6b7280' },
+  addrLabelChipTextActive: { color: '#2563eb' },
 })

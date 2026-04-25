@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react'
 import {
   View, Text, TouchableOpacity, StyleSheet, Alert,
-  ScrollView, TextInput, ActivityIndicator,
+  ScrollView, TextInput, ActivityIndicator, Share,
 } from 'react-native'
 import { useNavigation, CommonActions } from '@react-navigation/native'
 import { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase'
+import { formatCurrency } from '../lib/currency'
 import { RootStackParamList } from '../navigation'
 
 type Nav = NativeStackNavigationProp<RootStackParamList>
@@ -29,20 +30,56 @@ export default function ProfileScreen({ user, signOut }: Props) {
   const [editName,  setEditName]  = useState('')
   const [editPhone, setEditPhone] = useState('')
 
+  // Wallet & referral
+  const [walletBalance,  setWalletBalance]  = useState(0)
+  const [referralCode,   setReferralCode]   = useState('')
+  const [claimInput,     setClaimInput]     = useState('')
+  const [claiming,       setClaiming]       = useState(false)
+
   useEffect(() => {
     supabase.from('orders').select('id', { count: 'exact', head: true }).eq('user_id', user.id)
       .then(({ count }) => setOrderCount(count ?? 0))
     supabase.from('service_bookings').select('id', { count: 'exact', head: true }).eq('user_id', user.id)
       .then(({ count }) => setBookingCount(count ?? 0))
 
-    supabase.from('profiles').select('full_name, phone').eq('id', user.id).single()
-      .then(({ data }) => {
+    supabase.from('profiles').select('full_name, phone, referral_code').eq('id', user.id).single()
+      .then(async ({ data }) => {
         if (data) {
           setFullName(data.full_name ?? '')
           setPhone(data.phone ?? '')
+          let code = (data as unknown as { referral_code?: string }).referral_code ?? ''
+          if (!code) {
+            code = user.id.replace(/-/g, '').slice(0, 8).toUpperCase()
+            await supabase.from('profiles').update({ referral_code: code }).eq('id', user.id)
+          }
+          setReferralCode(code)
         }
       })
+
+    supabase.from('user_wallets').select('balance').eq('user_id', user.id).maybeSingle()
+      .then(({ data }) => setWalletBalance(Number(data?.balance ?? 0)))
   }, [user.id])
+
+  const handleClaimReferral = async () => {
+    const code = claimInput.trim().toUpperCase()
+    if (code.length < 4) { Alert.alert('Enter a valid referral code'); return }
+    setClaiming(true)
+    try {
+      const { data } = await supabase.rpc('claim_referral', { p_code: code })
+      const res = data as { ok: boolean; error?: string }
+      if (res.ok) {
+        setWalletBalance(b => b + 50)
+        setClaimInput('')
+        Alert.alert('🎉 Bonus Added!', '₹50 has been added to your wallet.')
+      } else {
+        Alert.alert('Could not claim', res.error ?? 'Please try again.')
+      }
+    } catch {
+      Alert.alert('Error', 'Could not process referral. Try again.')
+    } finally {
+      setClaiming(false)
+    }
+  }
 
   const startEditing = () => {
     setEditName(fullName)
@@ -245,9 +282,68 @@ export default function ProfileScreen({ user, signOut }: Props) {
         </TouchableOpacity>
       </View>
 
-      {/* ── Legal ──────────────────────────────────────────────── */}
+      {/* ── Wallet & Referral ──────────────────────────────────── */}
       <View style={styles.menuCard}>
-        <Text style={styles.cardSection}>Legal</Text>
+        <Text style={styles.cardSection}>Wallet & Referrals</Text>
+
+        {/* Balance */}
+        <View style={styles.walletRow}>
+          <View>
+            <Text style={styles.walletLabel}>💳 Wallet Balance</Text>
+            <Text style={styles.walletBalance}>{formatCurrency(walletBalance)}</Text>
+          </View>
+          <View style={styles.walletBadge}>
+            <Text style={styles.walletBadgeText}>Store Credit</Text>
+          </View>
+        </View>
+
+        {/* Referral code */}
+        <View style={styles.refCodeBox}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.refCodeLabel}>🎁 Your referral code</Text>
+            <Text style={styles.refCode}>{referralCode || '—'}</Text>
+            <Text style={styles.refCodeHint}>Share it — both you & your friend get ₹50</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.refShareBtn}
+            onPress={() => Share.share({
+              message: `Use my referral code ${referralCode} on 1ShopStore to get ₹50 wallet credit! Download the app and shop hardware, electricals & plumbing delivered fast.`,
+            })}
+          >
+            <Text style={styles.refShareBtnText}>Share</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Claim a code */}
+        <View style={styles.claimRow}>
+          <TextInput
+            style={styles.claimInput}
+            placeholder="Enter friend's referral code"
+            placeholderTextColor="#9ca3af"
+            autoCapitalize="characters"
+            value={claimInput}
+            onChangeText={setClaimInput}
+          />
+          <TouchableOpacity
+            style={[styles.claimBtn, (!claimInput.trim() || claiming) && { opacity: 0.5 }]}
+            onPress={handleClaimReferral}
+            disabled={!claimInput.trim() || claiming}
+          >
+            {claiming
+              ? <ActivityIndicator size="small" color="#fff" />
+              : <Text style={styles.claimBtnText}>Claim</Text>}
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* ── Support ────────────────────────────────────────────── */}
+      <View style={styles.menuCard}>
+        <Text style={styles.cardSection}>Support</Text>
+        <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('HelpSupport')}>
+          <Text style={styles.menuItemIcon}>🛟</Text>
+          <Text style={styles.menuItemText}>Help & Support</Text>
+          <Text style={styles.menuArrow}>›</Text>
+        </TouchableOpacity>
         <TouchableOpacity style={[styles.menuItem, { borderBottomWidth: 0 }]} onPress={() => navigation.navigate('PrivacyPolicy')}>
           <Text style={styles.menuItemIcon}>🔒</Text>
           <Text style={styles.menuItemText}>Privacy Policy</Text>
@@ -364,6 +460,37 @@ const styles = StyleSheet.create({
   menuArrow:    { fontSize: 20, color: '#9ca3af', lineHeight: 24 },
 
   // Sign out
+  walletRow: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    paddingHorizontal: 14, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#f3f4f6',
+  },
+  walletLabel:   { fontSize: 13, color: '#6b7280', fontWeight: '500', marginBottom: 2 },
+  walletBalance: { fontSize: 22, fontWeight: '800', color: '#0c64c0' },
+  walletBadge:   { backgroundColor: '#eff6ff', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 4 },
+  walletBadgeText: { fontSize: 11, fontWeight: '700', color: '#0c64c0' },
+
+  refCodeBox: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingHorizontal: 14, paddingVertical: 12,
+    borderBottomWidth: 1, borderBottomColor: '#f3f4f6',
+  },
+  refCodeLabel: { fontSize: 12, color: '#6b7280', fontWeight: '500', marginBottom: 2 },
+  refCode:      { fontSize: 20, fontWeight: '800', color: '#111827', letterSpacing: 2 },
+  refCodeHint:  { fontSize: 11, color: '#9ca3af', marginTop: 2 },
+  refShareBtn:  { backgroundColor: '#0c64c0', borderRadius: 10, paddingHorizontal: 16, paddingVertical: 10 },
+  refShareBtnText: { color: '#fff', fontWeight: '700', fontSize: 13 },
+
+  claimRow: {
+    flexDirection: 'row', gap: 8,
+    paddingHorizontal: 14, paddingTop: 12, paddingBottom: 14,
+  },
+  claimInput: {
+    flex: 1, height: 42, borderWidth: 1, borderColor: '#d1d5db', borderRadius: 9,
+    paddingHorizontal: 12, fontSize: 14, backgroundColor: '#f9fafb', color: '#111827',
+  },
+  claimBtn:     { backgroundColor: '#16a34a', borderRadius: 9, paddingHorizontal: 18, alignItems: 'center', justifyContent: 'center', height: 42 },
+  claimBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+
   signOutBtn: {
     margin: 16, marginTop: 24, marginBottom: 0,
     backgroundColor: '#fee2e2', borderRadius: 12,

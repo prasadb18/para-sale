@@ -64,6 +64,10 @@ export default function Navbar() {
           {/* Logo */}
           <Link to="/" className="brand-mark">
             <img src="/logo.png" alt="1ShopStore" className="brand-logo" />
+            <div className="brand-details">
+              <span className="brand-name">1ShopStore</span>
+              <span className="brand-tagline">Hardware, plumbing & electrical — delivered fast</span>
+            </div>
           </Link>
 
           {/* Delivery zone — opens location picker */}

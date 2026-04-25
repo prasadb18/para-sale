@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   View, Text, FlatList, TouchableOpacity,
   Image, StyleSheet,
@@ -7,6 +7,7 @@ import { useNavigation } from '@react-navigation/native'
 import { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import useWishlistStore from '../store/wishlistStore'
 import useCartStore from '../store/cartStore'
+import useAuthStore from '../store/authStore'
 import { formatCurrency, calcDiscount } from '../lib/currency'
 import { RootStackParamList } from '../navigation'
 import { Product } from '../api'
@@ -18,6 +19,32 @@ export default function WishlistScreen() {
   const items        = useWishlistStore(s => s.items)
   const toggle       = useWishlistStore(s => s.toggle)
   const addItem      = useCartStore(s => s.addItem)
+  const user         = useAuthStore(s => s.user)
+
+  const [droppedIds, setDroppedIds] = useState<Set<string>>(new Set())
+
+  useEffect(() => {
+    if (!user || items.length === 0) return
+    ;(async () => {
+      try {
+        const { supabase } = await import('../lib/supabase')
+        const { data } = await supabase
+          .from('price_drop_alerts')
+          .select('product_id, alert_price')
+          .eq('user_id', user.id)
+          .eq('notified', false)
+        if (!data) return
+        const dropped = new Set<string>()
+        for (const alert of data) {
+          const item = items.find(i => String(i.id) === String(alert.product_id))
+          if (item && Number(item.price) < Number(alert.alert_price)) {
+            dropped.add(String(alert.product_id))
+          }
+        }
+        setDroppedIds(dropped)
+      } catch {}
+    })()
+  }, [user, items])
 
   const handleAddToCart = (product: Product) => {
     addItem(product)
@@ -54,6 +81,11 @@ export default function WishlistScreen() {
         {discount > 0 && (
           <View style={styles.badge}>
             <Text style={styles.badgeText}>{discount}% off</Text>
+          </View>
+        )}
+        {droppedIds.has(String(item.id)) && (
+          <View style={styles.priceDrop}>
+            <Text style={styles.priceDropText}>📉 Price dropped!</Text>
           </View>
         )}
         {/* Remove from wishlist */}
@@ -147,4 +179,10 @@ const styles = StyleSheet.create({
   },
   addBtnDisabled: { backgroundColor: '#e5e7eb' },
   addBtnText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  priceDrop: {
+    position: 'absolute', top: 8, right: 34,
+    backgroundColor: '#fef9c3', borderRadius: 5,
+    paddingHorizontal: 5, paddingVertical: 2,
+  },
+  priceDropText: { fontSize: 9, fontWeight: '700', color: '#854d0e' },
 })

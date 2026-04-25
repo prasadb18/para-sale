@@ -21,6 +21,10 @@ import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen'
 import WishlistScreen from '../screens/WishlistScreen'
 import OrderTrackingScreen from '../screens/OrderTrackingScreen'
 import NotificationPreferencesScreen from '../screens/NotificationPreferencesScreen'
+import OnboardingScreen from '../screens/OnboardingScreen'
+import HelpSupportScreen from '../screens/HelpSupportScreen'
+import CouponDiscoveryScreen from '../screens/CouponDiscoveryScreen'
+import CompareScreen from '../screens/CompareScreen'
 
 import useAuthStore from '../store/authStore'
 import useCartStore from '../store/cartStore'
@@ -37,6 +41,10 @@ export type RootStackParamList = {
   Wishlist: undefined
   OrderTracking: { orderId: string }
   NotificationPreferences: undefined
+  Onboarding: undefined
+  HelpSupport: undefined
+  Coupons: { cartTotal?: number; onApply?: (code: string) => void } | undefined
+  Compare: undefined
 }
 
 export type TabParamList = {
@@ -122,9 +130,22 @@ function AccountScreen() {
 export const navigationRef = createNavigationContainerRef<RootStackParamList>()
 
 export default function AppNavigation() {
+  const [initialRoute, setInitialRoute] = React.useState<'Main' | 'Onboarding' | null>(null)
+
+  React.useEffect(() => {
+    import('@react-native-async-storage/async-storage').then(({ default: AsyncStorage }) => {
+      AsyncStorage.getItem('@onboarding_done').then(val => {
+        setInitialRoute(val ? 'Main' : 'Onboarding')
+      }).catch(() => setInitialRoute('Main'))
+    })
+  }, [])
+
+  if (!initialRoute) return null
+
   return (
     <NavigationContainer ref={navigationRef}>
       <Stack.Navigator
+        initialRouteName={initialRoute}
         screenOptions={{
           headerShown: false,
           headerStyle: { backgroundColor: '#0c2d5e' },
@@ -132,6 +153,7 @@ export default function AppNavigation() {
           headerTitleStyle: { fontWeight: '700', fontSize: 17 },
         }}
       >
+        <Stack.Screen name="Onboarding" component={OnboardingScreen} options={{ headerShown: false }} />
         <Stack.Screen name="Main" component={MainTabs} />
         <Stack.Screen
           name="ProductDetail"
@@ -182,6 +204,21 @@ export default function AppNavigation() {
           name="NotificationPreferences"
           component={NotificationPreferencesScreen}
           options={{ headerShown: false }}
+        />
+        <Stack.Screen
+          name="HelpSupport"
+          component={HelpSupportScreen}
+          options={{ headerShown: true, title: 'Help & Support' }}
+        />
+        <Stack.Screen
+          name="Coupons"
+          component={CouponDiscoveryScreen}
+          options={{ headerShown: true, title: 'Coupons & Offers' }}
+        />
+        <Stack.Screen
+          name="Compare"
+          component={CompareScreen}
+          options={{ headerShown: true, title: 'Compare Products' }}
         />
       </Stack.Navigator>
     </NavigationContainer>

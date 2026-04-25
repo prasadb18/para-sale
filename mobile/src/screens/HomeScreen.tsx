@@ -3,6 +3,7 @@ import {
   View, Text, TouchableOpacity, StyleSheet,
   ActivityIndicator, ScrollView, Image, Dimensions, Alert, Modal, RefreshControl,
 } from 'react-native'
+import { supabase } from '../lib/supabase'
 // react-native-maps is not bundled in Expo Go — load lazily to avoid crash
 let MapView: any = null
 let Region: any = null
@@ -18,6 +19,7 @@ import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs'
 import { NativeStackNavigationProp } from '@react-navigation/native-stack'
 import { getCategories, getProducts, Category, Product } from '../api'
 import useCartStore from '../store/cartStore'
+import useAuthStore from '../store/authStore'
 import useRecentlyViewedStore from '../store/recentlyViewedStore'
 import { RootStackParamList, TabParamList } from '../navigation'
 import { formatCurrency } from '../lib/currency'
@@ -89,6 +91,53 @@ const KITS = [
   { id: 'safety',   icon: '🔒', name: 'Safety & Protection Kit', tagline: 'MCB breakers, earthing & protection',     color: '#fce4ec', accent: '#b71c1c', search: 'mcb' },
 ]
 
+// ── Project kit card with Add to Cart ────────────────────────────────
+function KitCard({ kit, onAdd }: {
+  kit: typeof KITS[number]
+  onAdd: (search: string) => Promise<void>
+}) {
+  const [loading, setLoading] = useState(false)
+  const [done,    setDone]    = useState(false)
+
+  const handleAdd = async () => {
+    setLoading(true)
+    await onAdd(kit.search)
+    setLoading(false)
+    setDone(true)
+    setTimeout(() => setDone(false), 2500)
+  }
+
+  return (
+    <View style={[kc.card, { backgroundColor: kit.color, borderColor: kit.accent + '50' }]}>
+      <Text style={kc.icon}>{kit.icon}</Text>
+      <Text style={[kc.name, { color: kit.accent }]}>{kit.name}</Text>
+      <Text style={kc.tagline}>{kit.tagline}</Text>
+      <TouchableOpacity
+        style={[kc.btn, { backgroundColor: kit.accent }, (loading || done) && { opacity: 0.75 }]}
+        onPress={handleAdd}
+        disabled={loading || done}
+      >
+        {loading
+          ? <ActivityIndicator size="small" color="#fff" />
+          : <Text style={kc.btnText}>{done ? '✓ Added!' : '+ Add to Cart'}</Text>
+        }
+      </TouchableOpacity>
+    </View>
+  )
+}
+
+const kc = StyleSheet.create({
+  card: {
+    width: 160, borderRadius: 16, padding: 14, borderWidth: 1,
+    shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, elevation: 2,
+  },
+  icon:    { fontSize: 28, marginBottom: 8 },
+  name:    { fontSize: 13, fontWeight: '700', marginBottom: 4, lineHeight: 18 },
+  tagline: { fontSize: 11, color: '#6b7280', lineHeight: 15, marginBottom: 10 },
+  btn:     { borderRadius: 8, paddingVertical: 8, alignItems: 'center' },
+  btnText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+})
+
 // ── Compact product tile (horizontal scroll) ──────────────────────────
 function ProductTile({ p, onPress, onAdd }: { p: Product; onPress: () => void; onAdd: () => void }) {
   const inStock = Number(p.stock || 0) > 0
@@ -111,17 +160,47 @@ function ProductTile({ p, onPress, onAdd }: { p: Product; onPress: () => void; o
 }
 
 // ═══════════════════════════════════════════════════════════════════════
+interface PastOrder {
+  id: string
+  created_at: string
+  total: number
+  order_items: { product_id: string; quantity: number; price_at_order: number; products: { name: string; image_url?: string } | null }[]
+}
+
+// ── Flash Sale countdown timer ────────────────────────────────────────
+function useCountdown(targetHour: number) {
+  const getRemaining = () => {
+    const now = new Date()
+    const end = new Date()
+    end.setHours(targetHour, 0, 0, 0)
+    if (end <= now) end.setDate(end.getDate() + 1)
+    const diff = Math.max(0, Math.floor((end.getTime() - now.getTime()) / 1000))
+    const h = Math.floor(diff / 3600)
+    const m = Math.floor((diff % 3600) / 60)
+    const sec = diff % 60
+    return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`
+  }
+  const [time, setTime] = useState(getRemaining)
+  useEffect(() => {
+    const id = setInterval(() => setTime(getRemaining()), 1000)
+    return () => clearInterval(id)
+  }, [])
+  return time
+}
+
 export default function HomeScreen() {
   const navigation = useNavigation<Nav>()
   const [categories, setCategories] = useState<Category[]>([])
   const [products,   setProducts]   = useState<Product[]>([])
   const [loading,    setLoading]    = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [pastOrders, setPastOrders] = useState<PastOrder[]>([])
 
   const count        = useCartStore(s => s.count)
   const addItem      = useCartStore(s => s.addItem)
   const recentItems  = useRecentlyViewedStore(s => s.items)
   const clearViewed  = useRecentlyViewedStore(s => s.clearViewed)
+  const user         = useAuthStore(s => s.user)
 
   const [locationText, setLocationText] = useState('Detecting location…')
   const [locationLoading, setLocationLoading] = useState(false)
@@ -147,6 +226,22 @@ export default function HomeScreen() {
     loadData()
     detectLocation()
   }, [])
+
+  useEffect(() => {
+    if (!user) { setPastOrders([]); return }
+    ;(async () => {
+      try {
+        const { data } = await supabase
+          .from('orders')
+          .select('id, created_at, total, order_items(product_id, quantity, price_at_order, products(name, image_url))')
+          .eq('user_id', user.id)
+          .not('status', 'eq', 'cancelled')
+          .order('created_at', { ascending: false })
+          .limit(4)
+        setPastOrders((data || []) as unknown as PastOrder[])
+      } catch {}
+    })()
+  }, [user])
 
   const detectLocation = async () => {
     setLocationLoading(true)
@@ -221,7 +316,9 @@ export default function HomeScreen() {
     }
   }
 
+  const flashCountdown = useCountdown(23) // ends at 11 PM
   const inStock = products.filter(p => Number(p.stock || 0) > 0)
+  const flashDeals = products.filter(p => p.mrp && Number(p.mrp) > Number(p.price) && Number(p.stock || 0) > 0).slice(0, 8)
 
   // ── Navigation helpers ────────────────────────────────────────────
   // Navigate to Products tab, optionally filtered by category or search
@@ -446,6 +543,52 @@ export default function HomeScreen() {
           </View>
         )}
 
+        {/* ══ 5b. FLASH DEALS ══════════════════════════════════════ */}
+        {flashDeals.length > 0 && (
+          <View style={s.flashSection}>
+            <View style={s.flashHeader}>
+              <View style={s.flashTitleRow}>
+                <Text style={s.flashTitle}>⚡ Flash Deals</Text>
+                <View style={s.flashTimerPill}>
+                  <Text style={s.flashTimerText}>Ends in {flashCountdown}</Text>
+                </View>
+              </View>
+              <TouchableOpacity onPress={() => goToProducts({ categorySlug: '', categoryName: '', search: '' })}>
+                <Text style={s.seeAll}>See all →</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 12, paddingRight: 20 }}>
+              {flashDeals.map(p => {
+                const disc = Math.round(((Number(p.mrp) - Number(p.price)) / Number(p.mrp)) * 100)
+                return (
+                  <TouchableOpacity
+                    key={String(p.id)}
+                    style={s.flashCard}
+                    onPress={() => navigation.navigate('ProductDetail', { id: p.id })}
+                    activeOpacity={0.88}
+                  >
+                    <View style={s.flashDiscBadge}><Text style={s.flashDiscText}>{disc}% OFF</Text></View>
+                    {p.image_url
+                      ? <Image source={{ uri: p.image_url }} style={s.flashImg} resizeMode="cover" />
+                      : <View style={[s.flashImg, { alignItems: 'center', justifyContent: 'center' }]}><Text style={{ fontSize: 28 }}>📦</Text></View>
+                    }
+                    <View style={s.flashBody}>
+                      <Text style={s.flashName} numberOfLines={2}>{p.name}</Text>
+                      <View style={s.flashPriceRow}>
+                        <Text style={s.flashPrice}>{formatCurrency(p.price)}</Text>
+                        <Text style={s.flashMrp}>{formatCurrency(p.mrp)}</Text>
+                      </View>
+                      <TouchableOpacity style={s.flashAddBtn} onPress={() => addItem(p)}>
+                        <Text style={s.flashAddBtnText}>+ Add</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </TouchableOpacity>
+                )
+              })}
+            </ScrollView>
+          </View>
+        )}
+
         {/* ══ 6. STATS STRIP (dark navy — contrast break) ══════════ */}
         <View style={s.statsStrip}>
           <TouchableOpacity style={s.statItem} onPress={() => goToProducts({ categorySlug: '', categoryName: '', search: '' })}>
@@ -465,11 +608,10 @@ export default function HomeScreen() {
         </View>
 
         {/* ══ 7. PROJECT KITS ══════════════════════════════════════ */}
-        {/* Each kit → Products filtered by kit's search keyword */}
         <View style={s.kitsSection}>
           <View style={s.sectionHeader}>
             <Text style={s.sectionTitle}>Project Kits</Text>
-            <Text style={s.sectionSubtitle}>Everything for a job in one go</Text>
+            <Text style={s.sectionSubtitle}>Everything for a job — added in one tap</Text>
           </View>
           <ScrollView
             horizontal
@@ -477,17 +619,20 @@ export default function HomeScreen() {
             contentContainerStyle={{ gap: 12, paddingRight: 20 }}
           >
             {KITS.map(kit => (
-              <TouchableOpacity
+              <KitCard
                 key={kit.id}
-                style={[s.kitCard, { backgroundColor: kit.color, borderColor: kit.accent + '50' }]}
-                onPress={() => goToProducts({ search: kit.search, categoryName: kit.name })}
-                activeOpacity={0.88}
-              >
-                <Text style={s.kitIcon}>{kit.icon}</Text>
-                <Text style={[s.kitName, { color: kit.accent }]}>{kit.name}</Text>
-                <Text style={s.kitTagline}>{kit.tagline}</Text>
-                <Text style={[s.kitExplore, { color: kit.accent }]}>Explore →</Text>
-              </TouchableOpacity>
+                kit={kit}
+                onAdd={async (search) => {
+                  const res = await getProducts(undefined, search)
+                  const inStockItems = (res.data || []).filter(p => Number(p.stock || 0) > 0).slice(0, 5)
+                  if (inStockItems.length === 0) {
+                    Alert.alert('No items in stock', 'None of the kit items are currently in stock.')
+                    return
+                  }
+                  inStockItems.forEach(p => addItem(p))
+                  Alert.alert(`${kit.name} Added!`, `${inStockItems.length} item${inStockItems.length > 1 ? 's' : ''} added to your cart.`)
+                }}
+              />
             ))}
           </ScrollView>
         </View>
@@ -566,6 +711,50 @@ export default function HomeScreen() {
                   </View>
                 </TouchableOpacity>
               ))}
+            </ScrollView>
+          </View>
+        )}
+
+        {/* ══ 11. ORDER AGAIN ══════════════════════════════════════ */}
+        {pastOrders.length > 0 && (
+          <View style={s.orderAgainSection}>
+            <View style={s.sectionHeader}>
+              <View>
+                <Text style={s.sectionTitle}>Order Again</Text>
+                <Text style={s.sectionSubtitle}>Quick reorder from your recent orders</Text>
+              </View>
+              <TouchableOpacity onPress={() => navigation.navigate('Orders')}>
+                <Text style={s.seeAll}>All orders →</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ gap: 12, paddingRight: 20 }}
+            >
+              {pastOrders.map(order => {
+                const firstItem = order.order_items?.[0]
+                const img = firstItem?.products?.image_url
+                const name = firstItem?.products?.name ?? 'Order'
+                const extra = (order.order_items?.length ?? 1) - 1
+                return (
+                  <View key={order.id} style={s.orderAgainCard}>
+                    {img ? (
+                      <Image source={{ uri: img }} style={s.orderAgainImg} resizeMode="cover" />
+                    ) : (
+                      <View style={s.orderAgainImgPlaceholder}><Text style={{ fontSize: 24 }}>📦</Text></View>
+                    )}
+                    <Text style={s.orderAgainName} numberOfLines={2}>{name}{extra > 0 ? ` +${extra} more` : ''}</Text>
+                    <Text style={s.orderAgainTotal}>{formatCurrency(order.total)}</Text>
+                    <TouchableOpacity
+                      style={s.orderAgainBtn}
+                      onPress={() => navigation.navigate('Orders')}
+                    >
+                      <Text style={s.orderAgainBtnText}>🔄 Reorder</Text>
+                    </TouchableOpacity>
+                  </View>
+                )
+              })}
             </ScrollView>
           </View>
         )}
@@ -854,4 +1043,37 @@ const s = StyleSheet.create({
   recentBody:  { padding: 8 },
   recentName:  { fontSize: 12, fontWeight: '500', color: '#374151', lineHeight: 16, marginBottom: 4 },
   recentPrice: { fontSize: 13, fontWeight: '700', color: '#111827' },
+
+  orderAgainSection: { paddingLeft: 20, paddingTop: 4, paddingBottom: 8 },
+  orderAgainCard: {
+    width: 150, backgroundColor: '#fff', borderRadius: 14, overflow: 'hidden',
+    shadowColor: '#000', shadowOpacity: 0.06, shadowRadius: 8, elevation: 3,
+  },
+  orderAgainImg: { width: 150, height: 100, backgroundColor: '#f3f4f6' },
+  orderAgainImgPlaceholder: { width: 150, height: 100, backgroundColor: '#f3f4f6', alignItems: 'center', justifyContent: 'center' },
+  orderAgainName:  { fontSize: 12, fontWeight: '500', color: '#374151', padding: 8, paddingBottom: 2, lineHeight: 16 },
+  orderAgainTotal: { fontSize: 13, fontWeight: '700', color: '#111827', paddingHorizontal: 8, marginBottom: 6 },
+  orderAgainBtn: { margin: 8, marginTop: 0, backgroundColor: '#eff6ff', borderRadius: 8, paddingVertical: 8, alignItems: 'center', borderWidth: 1, borderColor: '#bfdbfe' },
+  orderAgainBtnText: { fontSize: 12, fontWeight: '700', color: '#0c64c0' },
+
+  flashSection: { marginTop: 8, marginBottom: 8 },
+  flashHeader: { paddingHorizontal: 20, marginBottom: 12 },
+  flashTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  flashTitle: { fontSize: 18, fontWeight: '800', color: '#111827' },
+  flashTimerPill: { backgroundColor: '#ef4444', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4 },
+  flashTimerText: { fontSize: 12, fontWeight: '700', color: '#fff' },
+  flashCard: {
+    width: 150, backgroundColor: '#fff', borderRadius: 14, overflow: 'hidden',
+    shadowColor: '#000', shadowOpacity: 0.07, shadowRadius: 8, elevation: 3, marginLeft: 12,
+  },
+  flashDiscBadge: { position: 'absolute', top: 8, left: 8, zIndex: 1, backgroundColor: '#ef4444', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 3 },
+  flashDiscText: { fontSize: 11, fontWeight: '800', color: '#fff' },
+  flashImg: { width: 150, height: 110, backgroundColor: '#f3f4f6' },
+  flashBody: { padding: 8 },
+  flashName: { fontSize: 12, fontWeight: '500', color: '#374151', lineHeight: 16, marginBottom: 4 },
+  flashPriceRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 },
+  flashPrice: { fontSize: 14, fontWeight: '800', color: '#111827' },
+  flashMrp: { fontSize: 12, color: '#9ca3af', textDecorationLine: 'line-through' },
+  flashAddBtn: { backgroundColor: '#0c64c0', borderRadius: 8, paddingVertical: 7, alignItems: 'center' },
+  flashAddBtnText: { fontSize: 12, fontWeight: '700', color: '#fff' },
 })

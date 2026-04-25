@@ -3,7 +3,7 @@ import {
   View, Text, ScrollView, Image, TouchableOpacity,
   StyleSheet, ActivityIndicator, Alert, FlatList,
   Modal, TextInput, KeyboardAvoidingView, Platform,
-  Dimensions, NativeScrollEvent, NativeSyntheticEvent,
+  Dimensions, NativeScrollEvent, NativeSyntheticEvent, Share,
 } from 'react-native'
 
 const { width: SCREEN_W } = Dimensions.get('window')
@@ -15,6 +15,7 @@ import useCartStore from '../store/cartStore'
 import useWishlistStore from '../store/wishlistStore'
 import useAuthStore from '../store/authStore'
 import useRecentlyViewedStore from '../store/recentlyViewedStore'
+import useCompareStore from '../store/compareStore'
 import DeliveryEstimate from '../components/DeliveryEstimate'
 import { formatCurrency, calcDiscount } from '../lib/currency'
 import { RootStackParamList } from '../navigation'
@@ -264,6 +265,13 @@ export default function ProductDetailScreen() {
   const user       = useAuthStore(s => s.user)
   const [product, setProduct]     = useState<Product | null>(null)
   const [related, setRelated]     = useState<Product[]>([])
+  const [fbt, setFbt]             = useState<Product[]>([])
+  const [fbtAdded, setFbtAdded]   = useState(false)
+
+  const [pincode, setPincode]         = useState('')
+  const [pincodeChecking, setPincodeChecking] = useState(false)
+  type PincodeResult = { city: string; state: string; delivery_days: number } | 'not_serviceable' | null
+  const [pincodeResult, setPincodeResult]     = useState<PincodeResult>(null)
   const [loading, setLoading]     = useState(true)
   const [added, setAdded]         = useState(false)
   const [zoomIndex, setZoomIndex] = useState<number | null>(null)
@@ -283,12 +291,18 @@ export default function ProductDetailScreen() {
   const [draftRating, setDraftRating]   = useState(0)
   const [draftText, setDraftText]       = useState('')
   const [submitting, setSubmitting]     = useState(false)
+  const [notifyDone, setNotifyDone]     = useState(false)
+  const [watchPriceDone, setWatchPriceDone] = useState(false)
 
-  const addItem      = useCartStore(s => s.addItem)
-  const toggleWish   = useWishlistStore(s => s.toggle)
-  const isWishlisted = useWishlistStore(s => product ? s.isWishlisted(product.id) : false)
-  const addViewed    = useRecentlyViewedStore(s => s.addViewed)
-  const insets       = useSafeAreaInsets()
+  const addItem        = useCartStore(s => s.addItem)
+  const toggleWish     = useWishlistStore(s => s.toggle)
+  const isWishlisted   = useWishlistStore(s => product ? s.isWishlisted(product.id) : false)
+  const addViewed      = useRecentlyViewedStore(s => s.addViewed)
+  const compareAdd     = useCompareStore(s => s.add)
+  const compareRemove  = useCompareStore(s => s.remove)
+  const compareCount   = useCompareStore(s => s.items.length)
+  const isComparing    = useCompareStore(s => product ? s.isComparing(product.id) : false)
+  const insets         = useSafeAreaInsets()
 
   const loadReviews = useCallback((productId: string | number) => {
     setReviewsLoading(true)
@@ -316,8 +330,21 @@ export default function ProductDetailScreen() {
         setProduct(res.data)
         const slug = (res.data as unknown as { category_slug?: string }).category_slug
         if (slug) {
-          getProducts(slug).then(r => {
-            setRelated((r.data || []).filter(p => String(p.id) !== String(route.params.id)).slice(0, 6))
+          getProducts(slug).then(async r => {
+            const others = (r.data || []).filter(p => String(p.id) !== String(route.params.id))
+            setRelated(others.slice(0, 6))
+            try {
+              const { supabase } = await import('../lib/supabase')
+              const { data: fbtIds } = await supabase.rpc('get_frequently_bought_together', {
+                p_product_id: String(route.params.id),
+                p_limit: 4,
+              })
+              if (fbtIds && fbtIds.length > 0) {
+                const idSet = new Set((fbtIds as { product_id: string }[]).map(r => r.product_id))
+                const matched = others.filter(p => idSet.has(String(p.id))).slice(0, 4)
+                if (matched.length > 0) setFbt(matched)
+              }
+            } catch {}
           })
         }
         loadReviews(res.data.id)
@@ -403,6 +430,77 @@ export default function ProductDetailScreen() {
     })
     setAdded(true)
     setTimeout(() => setAdded(false), 2000)
+  }
+
+  const handleNotifyMe = async () => {
+    if (!user) { navigation.navigate('Login'); return }
+    try {
+      const { supabase } = await import('../lib/supabase')
+      await supabase.from('stock_alerts').upsert(
+        { user_id: user.id, product_id: String(product.id), variant_id: selectedVariant?.id ?? null },
+        { onConflict: 'user_id,product_id,variant_id' }
+      )
+      setNotifyDone(true)
+      Alert.alert('Alert Set!', "We'll notify you when this item is back in stock.")
+    } catch {
+      Alert.alert('Error', 'Could not set alert. Please try again.')
+    }
+  }
+
+  const handleShare = async () => {
+    try {
+      await Share.share({
+        message: `${product.name}\n\nPrice: ${formatCurrency(activePrice)}\n\nAvailable on 1ShopStore — hardware, electricals & plumbing delivered fast.`,
+        title: product.name,
+      })
+    } catch {}
+  }
+
+  useEffect(() => {
+    import('@react-native-async-storage/async-storage').then(({ default: AsyncStorage }) => {
+      AsyncStorage.getItem('@last_pincode').then(val => { if (val) setPincode(val) }).catch(() => {})
+    })
+  }, [])
+
+  const handleCheckPincode = async () => {
+    const cleaned = pincode.trim()
+    if (cleaned.length !== 6 || !/^\d{6}$/.test(cleaned)) {
+      Alert.alert('Invalid Pincode', 'Please enter a valid 6-digit pincode.')
+      return
+    }
+    setPincodeChecking(true)
+    setPincodeResult(null)
+    try {
+      const { supabase } = await import('../lib/supabase')
+      const { data } = await supabase
+        .from('serviceable_pincodes')
+        .select('city, state, delivery_days')
+        .eq('pincode', cleaned)
+        .maybeSingle()
+      setPincodeResult(data ?? 'not_serviceable')
+      import('@react-native-async-storage/async-storage').then(({ default: AsyncStorage }) => {
+        AsyncStorage.setItem('@last_pincode', cleaned).catch(() => {})
+      })
+    } catch {
+      Alert.alert('Error', 'Could not check pincode. Please try again.')
+    } finally {
+      setPincodeChecking(false)
+    }
+  }
+
+  const handleWatchPrice = async () => {
+    if (!user) { navigation.navigate('Login'); return }
+    try {
+      const { supabase } = await import('../lib/supabase')
+      await supabase.from('price_drop_alerts').upsert(
+        { user_id: user.id, product_id: String(product.id), alert_price: Number(activePrice) },
+        { onConflict: 'user_id,product_id' }
+      )
+      setWatchPriceDone(true)
+      Alert.alert('Watching Price!', "We'll notify you when the price drops.")
+    } catch {
+      Alert.alert('Error', 'Could not set price alert. Please try again.')
+    }
   }
 
   const myReview    = reviews.find(r => r.user_id === user?.id)
@@ -493,8 +591,40 @@ export default function ProductDetailScreen() {
             )}
           </View>
 
-          {/* Delivery estimate */}
-          <DeliveryEstimate compact />
+          {/* Pincode delivery check */}
+          <View style={styles.pincodeBox}>
+            <Text style={styles.pincodeLabel}>📍 Check delivery for your pincode</Text>
+            <View style={styles.pincodeRow}>
+              <TextInput
+                style={styles.pincodeInput}
+                placeholder="Enter 6-digit pincode"
+                placeholderTextColor="#9ca3af"
+                keyboardType="number-pad"
+                maxLength={6}
+                value={pincode}
+                onChangeText={v => { setPincode(v); setPincodeResult(null) }}
+                onSubmitEditing={handleCheckPincode}
+              />
+              <TouchableOpacity
+                style={[styles.pincodeCheckBtn, pincodeChecking && { opacity: 0.6 }]}
+                onPress={handleCheckPincode}
+                disabled={pincodeChecking}
+              >
+                {pincodeChecking
+                  ? <ActivityIndicator size="small" color="#fff" />
+                  : <Text style={styles.pincodeCheckBtnText}>Check</Text>}
+              </TouchableOpacity>
+            </View>
+            {pincodeResult !== null && (
+              pincodeResult === 'not_serviceable'
+                ? <Text style={styles.pincodeNotAvail}>✗ Sorry, we don't deliver to this pincode yet.</Text>
+                : <Text style={styles.pincodeAvail}>
+                    ✓ Delivered to {(pincodeResult as { city: string; state: string; delivery_days: number }).city},{' '}
+                    {(pincodeResult as { city: string; state: string; delivery_days: number }).state} in{' '}
+                    {(pincodeResult as { city: string; state: string; delivery_days: number }).delivery_days === 1 ? '1 day' : `${(pincodeResult as { city: string; state: string; delivery_days: number }).delivery_days} days`}
+                  </Text>
+            )}
+          </View>
 
           {/* Description */}
           {product.description ? (
@@ -621,6 +751,63 @@ export default function ProductDetailScreen() {
           </View>
         </View>
 
+        {/* Frequently Bought Together */}
+        {fbt.length > 0 && (
+          <View style={styles.fbtSection}>
+            <Text style={styles.fbtTitle}>🛒 Frequently Bought Together</Text>
+            <View style={styles.fbtRow}>
+              {/* Main product thumb */}
+              <TouchableOpacity style={styles.fbtCard} activeOpacity={0.9}>
+                {product.image_url
+                  ? <Image source={{ uri: product.image_url }} style={styles.fbtImg} resizeMode="cover" />
+                  : <View style={[styles.fbtImg, styles.fbtImgPlaceholder]}><Text style={{ fontSize: 20 }}>📦</Text></View>}
+                <Text style={styles.fbtName} numberOfLines={1}>{product.name}</Text>
+                <Text style={styles.fbtPrice}>{formatCurrency(activePrice)}</Text>
+              </TouchableOpacity>
+
+              {fbt.map(p => (
+                <React.Fragment key={String(p.id)}>
+                  <Text style={styles.fbtPlus}>+</Text>
+                  <TouchableOpacity
+                    style={styles.fbtCard}
+                    onPress={() => navigation.replace('ProductDetail', { id: p.id })}
+                    activeOpacity={0.85}
+                  >
+                    {p.image_url
+                      ? <Image source={{ uri: p.image_url }} style={styles.fbtImg} resizeMode="cover" />
+                      : <View style={[styles.fbtImg, styles.fbtImgPlaceholder]}><Text style={{ fontSize: 20 }}>📦</Text></View>}
+                    <Text style={styles.fbtName} numberOfLines={1}>{p.name}</Text>
+                    <Text style={styles.fbtPrice}>{formatCurrency(p.price)}</Text>
+                  </TouchableOpacity>
+                </React.Fragment>
+              ))}
+            </View>
+
+            <View style={styles.fbtFooter}>
+              <Text style={styles.fbtTotal}>
+                Bundle total:{' '}
+                <Text style={{ fontWeight: '800' }}>
+                  {formatCurrency(
+                    fbt.reduce((sum, p) => sum + Number(p.price), Number(activePrice))
+                  )}
+                </Text>
+              </Text>
+              <TouchableOpacity
+                style={[styles.fbtAddAll, fbtAdded && styles.fbtAddAllDone]}
+                disabled={fbtAdded}
+                onPress={() => {
+                  addItem(product)
+                  fbt.forEach(p => addItem(p))
+                  setFbtAdded(true)
+                  setTimeout(() => setFbtAdded(false), 2500)
+                }}
+              >
+                <Text style={styles.fbtAddAllText}>{fbtAdded ? '✓ All Added!' : 'Add All to Cart'}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
         {/* Related Products */}
         {related.length > 0 && (
           <View style={styles.relatedSection}>
@@ -651,23 +838,66 @@ export default function ProductDetailScreen() {
 
         {/* Footer CTA */}
         <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom + 12, 24) }]}>
+          <TouchableOpacity style={styles.shareBtn} onPress={handleShare}>
+            <Text style={styles.shareBtnIcon}>↗️</Text>
+          </TouchableOpacity>
           <TouchableOpacity
             style={[styles.wishBtn, isWishlisted && styles.wishBtnActive]}
             onPress={() => toggleWish(product)}
           >
             <Text style={styles.wishBtnIcon}>{isWishlisted ? '❤️' : '🤍'}</Text>
           </TouchableOpacity>
+          {inStock && (
+            <TouchableOpacity
+              style={[styles.watchPriceBtn, watchPriceDone && styles.watchPriceBtnDone]}
+              onPress={handleWatchPrice}
+              disabled={watchPriceDone}
+            >
+              <Text style={styles.watchPriceBtnText}>{watchPriceDone ? '📉 Watching' : '📉'}</Text>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity
-            style={[styles.addBtn, (!inStock || added) && styles.addBtnDone]}
-            onPress={handleAdd}
-            disabled={!inStock || added}
+            style={[styles.compareBtn, isComparing && styles.compareBtnActive]}
+            onPress={() => {
+              if (isComparing) {
+                compareRemove(product.id)
+              } else {
+                const ok = compareAdd(product)
+                if (!ok) Alert.alert('Compare limit', 'You can compare up to 3 products at a time.')
+              }
+            }}
           >
-            <Text style={styles.addBtnText}>
-              {added ? '✓ Added to cart' : inStock ? 'Add to cart' : 'Out of stock'}
-            </Text>
+            <Text style={styles.compareBtnText}>{isComparing ? '⚖️✓' : '⚖️'}</Text>
           </TouchableOpacity>
+          {inStock ? (
+            <TouchableOpacity
+              style={[styles.addBtn, added && styles.addBtnDone]}
+              onPress={handleAdd}
+              disabled={added}
+            >
+              <Text style={styles.addBtnText}>{added ? '✓ Added to cart' : 'Add to cart'}</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={[styles.addBtn, notifyDone ? styles.addBtnDone : styles.addBtnNotify]}
+              onPress={handleNotifyMe}
+              disabled={notifyDone}
+            >
+              <Text style={styles.addBtnText}>{notifyDone ? '🔔 Alert set!' : '🔔 Notify Me'}</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </ScrollView>
+
+      {/* ── Compare tray ── */}
+      {compareCount >= 2 && (
+        <View style={[styles.compareTray, { paddingBottom: Math.max(insets.bottom, 10) }]}>
+          <Text style={styles.compareTrayText}>⚖️ {compareCount} products selected</Text>
+          <TouchableOpacity style={styles.compareTrayBtn} onPress={() => navigation.navigate('Compare')}>
+            <Text style={styles.compareTrayBtnText}>Compare →</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* ── Full-screen zoom modal ── */}
       {zoomIndex !== null && (
@@ -810,15 +1040,78 @@ const styles = StyleSheet.create({
   noReviewsSub:   { fontSize: 13, color: '#9ca3af', marginTop: 4 },
 
   footer: { flexDirection: 'row', gap: 12, padding: 20, paddingBottom: 20 },
+  shareBtn: {
+    width: 52, borderRadius: 12, borderWidth: 1.5, borderColor: '#e5e7eb',
+    alignItems: 'center', justifyContent: 'center', backgroundColor: '#f9fafb',
+  },
+  shareBtnIcon: { fontSize: 20 },
   wishBtn: {
     width: 52, borderRadius: 12, borderWidth: 1.5, borderColor: '#e5e7eb',
     alignItems: 'center', justifyContent: 'center', backgroundColor: '#f9fafb',
   },
   wishBtnActive: { borderColor: '#fca5a5', backgroundColor: '#fff5f5' },
   wishBtnIcon: { fontSize: 22 },
-  addBtn: { flex: 1, backgroundColor: '#0c64c0', borderRadius: 12, paddingVertical: 16, alignItems: 'center' },
-  addBtnDone: { backgroundColor: '#16a34a' },
-  addBtnText: { color: '#fff', fontSize: 17, fontWeight: '700' },
+  addBtn:       { flex: 1, backgroundColor: '#0c64c0', borderRadius: 12, paddingVertical: 16, alignItems: 'center' },
+  addBtnDone:   { backgroundColor: '#16a34a' },
+  addBtnNotify: { backgroundColor: '#7c3aed' },
+  addBtnText:   { color: '#fff', fontSize: 17, fontWeight: '700' },
+  watchPriceBtn: {
+    width: 52, borderRadius: 12, borderWidth: 1.5, borderColor: '#fde68a', backgroundColor: '#fffbeb',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  watchPriceBtnDone: { borderColor: '#bbf7d0', backgroundColor: '#f0fdf4' },
+  watchPriceBtnText: { fontSize: 20 },
+  compareBtn: {
+    width: 52, borderRadius: 12, borderWidth: 1.5, borderColor: '#e5e7eb', backgroundColor: '#f9fafb',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  compareBtnActive: { borderColor: '#a5b4fc', backgroundColor: '#eef2ff' },
+  compareBtnText: { fontSize: 20 },
+  compareTray: {
+    position: 'absolute', bottom: 0, left: 0, right: 0,
+    backgroundColor: '#1e3a5f', flexDirection: 'row',
+    alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 16, paddingVertical: 10,
+  },
+  compareTrayText: { color: '#fff', fontSize: 14, fontWeight: '600', flex: 1 },
+  compareTrayBtn: { backgroundColor: '#0c64c0', borderRadius: 8, paddingHorizontal: 16, paddingVertical: 8 },
+  compareTrayBtnText: { color: '#fff', fontSize: 13, fontWeight: '700' },
+
+  pincodeBox: {
+    backgroundColor: '#f8fafc', borderRadius: 12, borderWidth: 1, borderColor: '#e2e8f0',
+    padding: 12, marginBottom: 14,
+  },
+  pincodeLabel:  { fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 8 },
+  pincodeRow:    { flexDirection: 'row', gap: 8 },
+  pincodeInput:  {
+    flex: 1, height: 42, backgroundColor: '#fff', borderRadius: 9, borderWidth: 1,
+    borderColor: '#d1d5db', paddingHorizontal: 12, fontSize: 15, color: '#111827',
+  },
+  pincodeCheckBtn: {
+    backgroundColor: '#0c64c0', borderRadius: 9, paddingHorizontal: 18,
+    alignItems: 'center', justifyContent: 'center', height: 42,
+  },
+  pincodeCheckBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  pincodeAvail:    { fontSize: 13, color: '#15803d', fontWeight: '600', marginTop: 8 },
+  pincodeNotAvail: { fontSize: 13, color: '#dc2626', fontWeight: '600', marginTop: 8 },
+
+  fbtSection: { paddingHorizontal: 20, paddingTop: 8, paddingBottom: 8 },
+  fbtTitle: { fontSize: 16, fontWeight: '700', color: '#111827', marginBottom: 14 },
+  fbtRow: { flexDirection: 'row', alignItems: 'flex-start', flexWrap: 'wrap', gap: 4, marginBottom: 14 },
+  fbtCard: {
+    width: 88, backgroundColor: '#fff', borderRadius: 10, overflow: 'hidden',
+    borderWidth: 1, borderColor: '#e5e7eb',
+  },
+  fbtImg: { width: 88, height: 72, backgroundColor: '#f3f4f6' },
+  fbtImgPlaceholder: { alignItems: 'center', justifyContent: 'center' },
+  fbtName: { fontSize: 10, color: '#374151', fontWeight: '500', padding: 5, paddingBottom: 2, lineHeight: 13 },
+  fbtPrice: { fontSize: 11, fontWeight: '700', color: '#111827', paddingHorizontal: 5, paddingBottom: 5 },
+  fbtPlus: { fontSize: 18, fontWeight: '700', color: '#9ca3af', alignSelf: 'center', marginHorizontal: 2 },
+  fbtFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  fbtTotal: { fontSize: 13, color: '#374151' },
+  fbtAddAll: { backgroundColor: '#0c64c0', borderRadius: 10, paddingHorizontal: 18, paddingVertical: 10 },
+  fbtAddAllDone: { backgroundColor: '#16a34a' },
+  fbtAddAllText: { fontSize: 13, fontWeight: '700', color: '#fff' },
 
   relatedSection: { paddingHorizontal: 20, paddingTop: 4, paddingBottom: 4 },
   relatedTitle: { fontSize: 17, fontWeight: '700', color: '#111827', marginBottom: 14 },

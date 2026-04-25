@@ -1,8 +1,9 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   View, Text, FlatList, TouchableOpacity,
   StyleSheet, Image, Alert, ScrollView,
   Modal, TextInput, KeyboardAvoidingView, Platform,
+  ActivityIndicator,
 } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useNavigation } from '@react-navigation/native'
@@ -13,6 +14,7 @@ import useGuestStore from '../store/guestStore'
 import { formatCurrency } from '../lib/currency'
 import { RootStackParamList } from '../navigation'
 import DeliveryEstimate from '../components/DeliveryEstimate'
+import { getProducts, Product } from '../api'
 
 type Nav = NativeStackNavigationProp<RootStackParamList>
 
@@ -183,6 +185,57 @@ function AuthGateModal({ visible, grandTotal, onClose }: { visible: boolean; gra
   )
 }
 
+function EmptyCartSuggestions() {
+  const navigation = useNavigation<Nav>()
+  const addItem    = useCartStore(s => s.addItem)
+  const [suggestions, setSuggestions] = useState<Product[]>([])
+  const [loading, setLoading]         = useState(true)
+
+  useEffect(() => {
+    getProducts()
+      .then(r => setSuggestions((r.data || []).filter(p => Number(p.stock || 0) > 0).slice(0, 10)))
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [])
+
+  return (
+    <ScrollView style={styles.emptySuggestScroll} showsVerticalScrollIndicator={false}>
+      <View style={styles.emptyTop}>
+        <Text style={styles.emptyIcon}>🛒</Text>
+        <Text style={styles.emptyTitle}>Your cart is empty</Text>
+        <Text style={styles.emptyCopy}>Here are some things you might need:</Text>
+      </View>
+
+      {loading ? (
+        <ActivityIndicator color="#0c64c0" style={{ marginTop: 24 }} />
+      ) : (
+        <View style={styles.suggestGrid}>
+          {suggestions.map(p => (
+            <TouchableOpacity
+              key={String(p.id)}
+              style={styles.suggestCard}
+              onPress={() => navigation.navigate('ProductDetail', { id: p.id })}
+              activeOpacity={0.85}
+            >
+              {p.image_url ? (
+                <Image source={{ uri: p.image_url }} style={styles.suggestImg} resizeMode="cover" />
+              ) : (
+                <View style={styles.suggestImgPlaceholder}><Text style={{ fontSize: 22 }}>📦</Text></View>
+              )}
+              <Text style={styles.suggestName} numberOfLines={2}>{p.name}</Text>
+              <Text style={styles.suggestPrice}>{formatCurrency(p.price)}</Text>
+              <TouchableOpacity style={styles.suggestAddBtn} onPress={() => addItem(p)}>
+                <Text style={styles.suggestAddTxt}>+ Add</Text>
+              </TouchableOpacity>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+      <View style={{ height: 32 }} />
+    </ScrollView>
+  )
+}
+
 export default function CartScreen() {
   const navigation = useNavigation<Nav>()
   const insets = useSafeAreaInsets()
@@ -204,13 +257,7 @@ export default function CartScreen() {
   }
 
   if (items.length === 0) {
-    return (
-      <View style={styles.empty}>
-        <Text style={styles.emptyIcon}>🛒</Text>
-        <Text style={styles.emptyTitle}>Your cart is empty</Text>
-        <Text style={styles.emptyCopy}>Add items from the products page.</Text>
-      </View>
-    )
+    return <EmptyCartSuggestions />
   }
 
   return (
@@ -282,9 +329,22 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: 22, fontWeight: '700', color: '#111827' },
   clearText: { color: '#ef4444', fontSize: 14, fontWeight: '500' },
   empty: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32 },
+  emptySuggestScroll: { flex: 1, backgroundColor: '#f9fafb' },
+  emptyTop: { alignItems: 'center', paddingTop: 48, paddingBottom: 20 },
   emptyIcon: { fontSize: 56, marginBottom: 16 },
   emptyTitle: { fontSize: 20, fontWeight: '700', color: '#374151', marginBottom: 6 },
   emptyCopy: { fontSize: 14, color: '#9ca3af', textAlign: 'center' },
+  suggestGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 12, gap: 12 },
+  suggestCard: {
+    width: '47%', backgroundColor: '#fff', borderRadius: 12,
+    overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, elevation: 2,
+  },
+  suggestImg: { width: '100%', height: 110, backgroundColor: '#f3f4f6' },
+  suggestImgPlaceholder: { width: '100%', height: 110, backgroundColor: '#f3f4f6', alignItems: 'center', justifyContent: 'center' },
+  suggestName:  { fontSize: 12, color: '#374151', fontWeight: '500', padding: 8, paddingBottom: 2, lineHeight: 17 },
+  suggestPrice: { fontSize: 13, fontWeight: '700', color: '#111827', paddingHorizontal: 8, marginBottom: 6 },
+  suggestAddBtn: { margin: 8, marginTop: 0, backgroundColor: '#0c64c0', borderRadius: 8, paddingVertical: 8, alignItems: 'center' },
+  suggestAddTxt: { color: '#fff', fontSize: 13, fontWeight: '700' },
   row: {
     flexDirection: 'row', backgroundColor: '#fff', borderRadius: 12,
     marginBottom: 12, overflow: 'hidden', shadowColor: '#000',

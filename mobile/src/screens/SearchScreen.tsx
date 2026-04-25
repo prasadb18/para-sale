@@ -5,6 +5,7 @@ import {
 } from 'react-native'
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native'
 import { NativeStackNavigationProp } from '@react-navigation/native-stack'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import { getProducts, Product } from '../api'
 import { formatCurrency } from '../lib/currency'
 import ProductCard from '../components/ProductCard'
@@ -12,6 +13,21 @@ import useCartStore from '../store/cartStore'
 import { RootStackParamList } from '../navigation'
 import useVoiceSearch from '../lib/useVoiceSearch'
 import useRecentlyViewedStore from '../store/recentlyViewedStore'
+
+const HISTORY_KEY = '@search_history'
+const MAX_HISTORY = 10
+
+async function loadHistory(): Promise<string[]> {
+  try { return JSON.parse(await AsyncStorage.getItem(HISTORY_KEY) ?? '[]') } catch { return [] }
+}
+async function saveHistory(term: string, current: string[]): Promise<string[]> {
+  const next = [term, ...current.filter(h => h !== term)].slice(0, MAX_HISTORY)
+  await AsyncStorage.setItem(HISTORY_KEY, JSON.stringify(next)).catch(() => {})
+  return next
+}
+async function clearHistory(): Promise<void> {
+  await AsyncStorage.removeItem(HISTORY_KEY).catch(() => {})
+}
 
 type Nav   = NativeStackNavigationProp<RootStackParamList>
 type Route = RouteProp<RootStackParamList, 'Search'>
@@ -50,12 +66,16 @@ export default function SearchScreen() {
   const navigation  = useNavigation<Nav>()
   const route       = useRoute<Route>()
   const inputRef    = useRef<TextInput>(null)
-  const [query, setQuery]       = useState('')
-  const [results, setResults]   = useState<Product[]>([])
-  const [loading, setLoading]   = useState(false)
-  const [searched, setSearched] = useState(false)
+  const [query, setQuery]         = useState('')
+  const [results, setResults]     = useState<Product[]>([])
+  const [loading, setLoading]     = useState(false)
+  const [searched, setSearched]   = useState(false)
+  const [history, setHistory]     = useState<string[]>([])
+  const [suggestions, setSuggestions] = useState<string[]>([])
   const addItem       = useCartStore(s => s.addItem)
   const recentItems   = useRecentlyViewedStore(s => s.items)
+
+  useEffect(() => { loadHistory().then(setHistory) }, [])
 
   const onVoiceResult = useCallback((text: string) => {
     setQuery(text)
@@ -73,18 +93,27 @@ export default function SearchScreen() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Debounced search
+  // Debounced search + typeahead suggestions
   useEffect(() => {
-    if (!query.trim()) { setResults([]); setSearched(false); return }
-    const t = setTimeout(() => {
+    if (!query.trim()) { setResults([]); setSearched(false); setSuggestions([]); return }
+    // Typeahead: filter history by current query
+    setSuggestions(history.filter(h => h.toLowerCase().includes(query.toLowerCase()) && h !== query).slice(0, 4))
+    const t = setTimeout(async () => {
       setLoading(true)
       setSearched(true)
-      getProducts(undefined, query.trim())
-        .then(res => setResults(res.data || []))
-        .finally(() => setLoading(false))
+      const res = await getProducts(undefined, query.trim()).catch(() => ({ data: [] as Product[] }))
+      setResults(res.data || [])
+      setLoading(false)
     }, 350)
     return () => clearTimeout(t)
-  }, [query])
+  }, [query, history])
+
+  const handleSearch = async (term: string) => {
+    setQuery(term)
+    setSuggestions([])
+    const next = await saveHistory(term, history)
+    setHistory(next)
+  }
 
   const isListening  = voice.state === 'listening'
   const isProcessing = voice.state === 'processing'
@@ -114,6 +143,7 @@ export default function SearchScreen() {
             placeholderTextColor={isListening ? '#60a5fa' : '#9ca3af'}
             value={isListening ? voice.partialText : query}
             onChangeText={text => { if (!isListening) setQuery(text) }}
+            onSubmitEditing={() => { if (query.trim()) handleSearch(query.trim()) }}
             returnKeyType="search"
             clearButtonMode="never"
             autoCapitalize="none"
@@ -159,6 +189,18 @@ export default function SearchScreen() {
         </View>
       )}
 
+      {/* Typeahead suggestions dropdown */}
+      {suggestions.length > 0 && !isListening && (
+        <View style={sh.suggestBox}>
+          {suggestions.map(s => (
+            <TouchableOpacity key={s} style={sh.suggestRow} onPress={() => handleSearch(s)}>
+              <Text style={sh.suggestIcon}>🕐</Text>
+              <Text style={sh.suggestText}>{s}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      )}
+
       {/* Results */}
       {loading ? (
         <ActivityIndicator style={{ marginTop: 40 }} size="large" color="#0c64c0" />
@@ -169,6 +211,25 @@ export default function SearchScreen() {
             <TouchableOpacity style={vs.hintMicBtn} onPress={voice.start}>
               <Text style={vs.hintMicText}>🎤  Try voice search</Text>
             </TouchableOpacity>
+          )}
+
+          {/* Search history */}
+          {history.length > 0 && (
+            <View style={sh.section}>
+              <View style={sh.sectionHeader}>
+                <Text style={sh.heading}>Recent Searches</Text>
+                <TouchableOpacity onPress={async () => { await clearHistory(); setHistory([]) }}>
+                  <Text style={sh.clearText}>Clear</Text>
+                </TouchableOpacity>
+              </View>
+              <View style={sh.historyWrap}>
+                {history.map(term => (
+                  <TouchableOpacity key={term} style={sh.historyChip} onPress={() => handleSearch(term)}>
+                    <Text style={sh.historyText}>🕐 {term}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
           )}
 
           {/* Recently viewed */}
@@ -313,6 +374,25 @@ const vs = StyleSheet.create({
 
   hintMicBtn:  { margin: 20, backgroundColor: '#eff6ff', borderRadius: 20, paddingHorizontal: 20, paddingVertical: 12, borderWidth: 1, borderColor: '#bfdbfe', alignItems: 'center' },
   hintMicText: { fontSize: 14, color: '#1d4ed8', fontWeight: '600' },
+})
+
+const sh = StyleSheet.create({
+  section:       { paddingHorizontal: 16, paddingTop: 16 },
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+  heading:       { fontSize: 15, fontWeight: '700', color: '#111827' },
+  clearText:     { fontSize: 13, color: '#9ca3af' },
+  historyWrap:   { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  historyChip:   { backgroundColor: '#f3f4f6', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7, borderWidth: 1, borderColor: '#e5e7eb' },
+  historyText:   { fontSize: 13, color: '#374151' },
+  suggestBox: {
+    position: 'absolute', top: 80, left: 12, right: 12, zIndex: 20,
+    backgroundColor: '#fff', borderRadius: 12,
+    shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 12, elevation: 10,
+    borderWidth: 1, borderColor: '#f3f4f6',
+  },
+  suggestRow:    { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#f3f4f6' },
+  suggestIcon:   { fontSize: 14 },
+  suggestText:   { fontSize: 14, color: '#374151' },
 })
 
 const rv = StyleSheet.create({
