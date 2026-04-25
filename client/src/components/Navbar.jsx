@@ -18,7 +18,35 @@ export default function Navbar() {
   const [accountOpen, setAccountOpen] = useState(false)
   const [locationOpen, setLocationOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const topbarRef = useRef(null)
   const accountRef = useRef(null)
+
+  useEffect(() => {
+    const topbar = topbarRef.current
+    if (!topbar) return
+
+    const updateTopbarHeight = () => {
+      document.documentElement.style.setProperty('--topbar-height', `${topbar.offsetHeight}px`)
+    }
+
+    updateTopbarHeight()
+
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', updateTopbarHeight)
+      return () => {
+        window.removeEventListener('resize', updateTopbarHeight)
+        document.documentElement.style.removeProperty('--topbar-height')
+      }
+    }
+
+    const observer = new ResizeObserver(updateTopbarHeight)
+    observer.observe(topbar)
+
+    return () => {
+      observer.disconnect()
+      document.documentElement.style.removeProperty('--topbar-height')
+    }
+  }, [])
 
   useEffect(() => {
     const params = new URLSearchParams(routerLocation.search)
@@ -58,7 +86,7 @@ export default function Navbar() {
 
   return (
     <>
-      <header className="topbar">
+      <header className="topbar" ref={topbarRef}>
         <div className="topbar__inner">
 
           {/* Logo */}

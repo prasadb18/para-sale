@@ -262,7 +262,9 @@ export default function Home() {
                   className="flash-card reveal"
                   onClick={() => navigate(`/product/${p.id}`)}
                 >
-                  {disc > 0 && <span className="flash-disc-badge">{disc}% off</span>}
+                  <div className="flash-card__offer-row">
+                    {disc > 0 && <span className="flash-disc-badge">Save {disc}%</span>}
+                  </div>
                   {p.image_url
                     ? <img src={imgUrl(p.image_url, { width: 160 })} alt={p.name} className="flash-card__img" />
                     : <div className="flash-card__placeholder">📦</div>}
