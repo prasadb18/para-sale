@@ -225,7 +225,10 @@ export default function Navbar() {
       </header>
 
       {/* Secondary nav */}
-      <nav className={`subnav ${menuOpen ? 'subnav--open' : ''}`}>
+      <nav className={`subnav ${menuOpen ? 'subnav--open' : ''}`} aria-label="Site navigation">
+        {menuOpen && (
+          <button type="button" className="subnav__close" onClick={() => setMenuOpen(false)} aria-label="Close menu">✕</button>
+        )}
         <div className="subnav__inner">
           <Link to="/products" className="subnav__link" onClick={() => setMenuOpen(false)}>Products</Link>
           <Link to="/services" className="subnav__link" onClick={() => setMenuOpen(false)}>Services</Link>

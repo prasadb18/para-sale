@@ -5279,3 +5279,152 @@
     flex-direction: column;
   }
 }
+
+/* ============================================================
+   MOBILE RESPONSIVE — COMPREHENSIVE FIXES
+   ============================================================ */
+
+/* ── Navbar: hide brand text on small screens ── */
+@media (max-width: 480px) {
+  .brand-details { display: none; }
+  .brand-logo { height: 36px; }
+  .topbar__inner { gap: 6px; }
+}
+
+/* ── Subnav overlay close button ── */
+.subnav__close {
+  display: none;
+  position: fixed;
+  top: 16px;
+  right: 20px;
+  background: var(--bg-soft);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  font-size: 1rem;
+  color: var(--text);
+  cursor: pointer;
+  z-index: 210;
+  align-items: center;
+  justify-content: center;
+}
+@media (max-width: 768px) {
+  .subnav__close { display: flex; }
+}
+
+/* ── Services page: booking form stacks on mobile ── */
+@media (max-width: 768px) {
+  .admin-form-row { grid-template-columns: 1fr; }
+  .service-type-grid { grid-template-columns: 1fr; }
+  .service-booking-form { gap: 10px; }
+  .service-hero { flex-direction: column; gap: 12px; }
+  .service-hero__pill { flex-wrap: wrap; }
+}
+
+/* ── Coupon page: single column on mobile ── */
+@media (max-width: 600px) {
+  .coupon-grid { grid-template-columns: 1fr !important; }
+  .coupon-card { flex-direction: row; }
+  .help-hero__title { font-size: 1.4rem; }
+}
+
+/* ── Help page CTA: stack buttons ── */
+@media (max-width: 480px) {
+  .help-cta-row { flex-direction: column; align-items: stretch; }
+  .help-cta-row .button { width: 100%; justify-content: center; }
+}
+
+/* ── Profile: wallet txn row ── */
+@media (max-width: 480px) {
+  .wallet-txn { flex-wrap: wrap; gap: 2px; }
+  .wallet-txn__amount { margin-left: auto; }
+}
+
+/* ── Booking card: wrap status badge on very small ── */
+@media (max-width: 380px) {
+  .booking-card__top { flex-wrap: wrap; gap: 8px; }
+  .booking-status-badge { align-self: flex-start; }
+}
+
+/* ── Product detail secondary actions: better spacing ── */
+@media (max-width: 480px) {
+  .product-detail__secondary-actions { gap: 6px; }
+  .btn-icon { font-size: 1.1rem; padding: 8px 10px; }
+  .compare-tray { padding: 10px 12px; }
+  .return-policy { padding: 12px 14px; }
+  .service-combo-cta { padding: 12px 14px; }
+}
+
+/* ── FBT section: horizontal scroll friendly ── */
+@media (max-width: 480px) {
+  .fbt-section { margin-top: 20px; }
+  .fbt-card { min-width: 120px; }
+  .fbt-card__img { height: 80px; }
+  .fbt-card__placeholder { height: 80px; font-size: 2rem; }
+}
+
+/* ── Flash deals: smaller cards on very small mobile ── */
+@media (max-width: 380px) {
+  .flash-card { flex: 0 0 140px; }
+  .flash-card__img { height: 85px; }
+}
+
+/* ── Pincode box: stack on mobile ── */
+@media (max-width: 480px) {
+  .pincode-box__row { flex-direction: row; gap: 6px; }
+  .pincode-box__input { flex: 1; min-width: 0; }
+}
+
+/* ── Kit strip: better mobile display ── */
+@media (max-width: 480px) {
+  .kit-card { padding: 16px 14px; }
+  .kit-card__icon { font-size: 2rem; }
+}
+
+/* ── Compare table: always scrollable ── */
+@media (max-width: 768px) {
+  .compare-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  .compare-header { flex-direction: row; flex-wrap: wrap; gap: 8px; }
+}
+
+/* ── Wishlist page: 2 col on mobile ── */
+@media (max-width: 380px) {
+  .wishlist-grid { grid-template-columns: 1fr !important; }
+}
+
+/* ── Cart notice: safe area on iOS notch ── */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .cart-notice { bottom: calc(10px + env(safe-area-inset-bottom)); }
+}
+
+/* ── Storefront page: bottom padding for cart notice ── */
+@media (max-width: 600px) {
+  .storefront-stage { padding-bottom: env(safe-area-inset-bottom, 0); }
+}
+
+/* ── Input / form touch improvements ── */
+@media (max-width: 768px) {
+  .input, .form-input, select.input {
+    font-size: 16px; /* prevents iOS zoom on focus */
+    min-height: 44px;
+  }
+  textarea.form-input, textarea.input {
+    font-size: 16px;
+  }
+}
+
+/* ── Checkout layout: always single column on mobile ── */
+@media (max-width: 768px) {
+  .checkout-layout { grid-template-columns: 1fr; gap: 14px; }
+  .bill-card, .order-card { position: static; order: 2; }
+  .checkout-main { order: 1; }
+  .wallet-toggle { padding: 10px 12px; }
+}
+
+/* ── Section titles readable on mobile ── */
+@media (max-width: 480px) {
+  .section-title { font-size: 1.05rem; }
+  .page-header__title { font-size: 1.25rem; }
+  .storefront-section { margin-bottom: 28px; }
+}
